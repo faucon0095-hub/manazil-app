@@ -151,7 +151,7 @@ export default function ManazilApp() {
     setLoading(true);
     setTimeout(() => { setMoonData(computeMoonData(d, sys)); setLoading(false); }, 250);
   }, []);
-
+// eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { compute(selectedDate, system); }, [selectedDate, system]);
 
   const dateStr = selectedDate.toISOString().split("T")[0];
