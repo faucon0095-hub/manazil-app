@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Manazil Sen-Astro</string>
+    <string name="title_activity_main">Manazil Sen-Astro</string>
+    <string name="package_name">com.senastro.manazil</string>
+    <string name="custom_url_scheme">com.senastro.manazil</string>
+</resources>
