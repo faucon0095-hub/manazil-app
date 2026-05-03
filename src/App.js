@@ -588,8 +588,8 @@ function PrayerView({t,date}){
   // Prière actuelle
   const now=new Date();
   const nowMinutes=now.getHours()*60+now.getMinutes();
-  const toMin=t=>parseInt(t.split(":")[0])*60+parseInt(t.split(":")[1]);
-  const prayerMins=prayerList.map(p=>toMin(p.time));
+  const toMin=s=>parseInt(s.split(":")[0])*60+parseInt(s.split(":")[1]);
+  const prayerMins=prayerList.map(p=>{ try { return toMin(p.time); } catch(e) { return 0; }});
   let currentPrayer=5;
   for(let i=0;i<prayerMins.length;i++){if(nowMinutes<prayerMins[i]){currentPrayer=i===0?5:i-1;break;}}
 
@@ -989,6 +989,18 @@ export default function App(){
 
   const compute=useCallback((d,s)=>{setLoading(true);setTimeout(()=>{setMd(calcData(d,s));setLoading(false);},250);},[]);
   useEffect(()=>{compute(selDate,sys);},[selDate,sys]);
+
+  // Détection nouvelle version → rechargement automatique
+  useEffect(()=>{
+    if("serviceWorker" in navigator){
+      navigator.serviceWorker.addEventListener("message",event=>{
+        if(event.data?.type==="NEW_VERSION"){
+          // Nouvelle version disponible → recharge silencieusement
+          window.location.reload();
+        }
+      });
+    }
+  },[]);
 
   const ds=selDate.toISOString().split("T")[0];
   const ts=`${String(selDate.getHours()).padStart(2,"0")}:${String(selDate.getMinutes()).padStart(2,"0")}`;

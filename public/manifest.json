@@ -1,42 +1,30 @@
 {
   "name": "Manāzil Al-Qamar — Sen-Astro",
   "short_name": "Manāzil",
-  "description": "Les 28 Stations Lunaires — Calcul astronomique sidéral et tropical. Par Sen-Astro.",
+  "version": "6.0",
+  "description": "Les 28 Stations Lunaires — Tradition arabo-islamique. Calculs astronomiques réels, rôles classiques Ibn Ajiba & Al-Buni, heures de prière, Du'a, manzil natal.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#07061a",
-  "theme_color": "#C9A84C",
+  "theme_color": "#1B1464",
   "orientation": "portrait",
   "lang": "fr",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
   ],
-  "categories": ["education", "lifestyle"],
-  "shortcuts": [
-    {
-      "name": "Aujourd'hui",
-      "short_name": "Aujourd'hui",
-      "description": "Voir le manzil du jour",
-      "url": "/?tab=today",
-      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Les Rôles",
-      "short_name": "Rôles",
-      "description": "Consulter les rôles des manzils",
-      "url": "/?tab=roles",
-      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
-    }
-  ]
+  "categories": ["education", "lifestyle", "religion"],
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false
 }
