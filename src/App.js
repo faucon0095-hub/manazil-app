@@ -970,7 +970,7 @@ export default function App(){
   const [prevTab,setPrevTab]=useState("today");
   const [tk,setTk]=useState("night");
   const t=THEMES[tk];
-  const tabOrder=["today","natal","book","prayer","dua","wheel","calendar","dates","roles","list","settings"];
+  const tabOrder=["today","natal","book","dua","wheel","calendar","dates","roles","list","settings"];
 
   // Swipe gauche/droite
   const touchStart=useRef(null);
@@ -1006,7 +1006,7 @@ export default function App(){
   const ts=`${String(selDate.getHours()).padStart(2,"0")}:${String(selDate.getMinutes()).padStart(2,"0")}`;
   const ph=phase(selDate);
 
-  const TABS=[["today","Aujourd'hui"],["natal","🌙 Natal"],["book","📚 Livre"],["prayer","🌅 Prière"],["dua","🤲 Du'a"],["wheel","⭕ Roue"],["calendar","📅 Mois"],["dates","🗓️ Dates"],["roles","Rôles"],["list","Les 28"],["settings","⚙️"]];
+  const TABS=[["today","Aujourd'hui"],["natal","🌙 Natal"],["book","📚 Livre"],["dua","🤲 Du'a"],["wheel","⭕ Roue"],["calendar","📅 Mois"],["dates","🗓️ Dates"],["roles","Rôles"],["list","Les 28"],["settings","⚙️"]];
 
   return(
     <div style={{minHeight:"100vh",maxWidth:430,margin:"0 auto",background:t.root,fontFamily:"'Georgia','Times New Roman',serif",color:t.textLight,position:"relative",overflow:"hidden"}} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
@@ -1061,7 +1061,7 @@ export default function App(){
       <div style={{padding:"12px 12px 90px",animation:"fadeUp 0.35s ease both"}} key={tab}>
         {tab==="today"&&<TodayView md={md} loading={loading} ph={ph} sys={sys} selDate={selDate} ds={ds} ts={ts} t={t} onDC={e=>{const d=new Date(e.target.value);d.setHours(selDate.getHours(),selDate.getMinutes());setSelDate(d);}} onTC={e=>{const[h,m]=e.target.value.split(":").map(Number);const d=new Date(selDate);d.setHours(h,m,0);setSelDate(d);}}/>}
         {tab==="natal"&&<NatalView sys={sys} t={t}/>}
-        {tab==="prayer"&&<PrayerView t={t} date={selDate}/>}
+
         {tab==="dua"&&<DuaView md={md} t={t}/>}
         {tab==="wheel"&&<WheelView md={md} ph={ph} t={t}/>}
         {tab==="calendar"&&<MonthCal selDate={selDate} setSelDate={setSelDate} sys={sys} setTab={setTab} t={t}/>}
