@@ -154,29 +154,71 @@ function sunLongitude(j){
   return m360(L0+C);
 }
 
-// ─── Hijri simplifié ───────────────────────────────────────────────────────
-function toHijri(date){
-  const jDay=jd(date)+0.5;
-  const l=Math.floor(jDay)+68569;
-  const n=Math.floor((4*l)/146097);
-  const l2=l-Math.floor((146097*n+3)/4);
-  const i=Math.floor((4000*(l2+1))/1461001);
-  const l3=l2-Math.floor((1461*i)/4)+31;
-  const j=Math.floor((80*l3)/2447);
-  const day=l3-Math.floor((2447*j)/80);
-  const l4=Math.floor(j/11);
-  const month=j+2-12*l4;
-  const year=100*(n-49)+i+l4-6700;
-  const hijriYear=Math.floor((jDay-1948439.5)/354.367+1);
-  const hijriMonths=["Muharram","Safar","Rabi' I","Rabi' II","Jumada I","Jumada II","Rajab","Sha'ban","Ramadan","Shawwal","Dhu al-Qa'da","Dhu al-Hijja"];
-  // Calcul simplifié
-  const epoch=1948438.5;
-  const cycle=Math.floor((jDay-epoch)/10631);
-  const rem=jDay-epoch-cycle*10631;
-  const y=Math.floor((rem*30+29)/10631)+cycle*30+1;
-  const m2=Math.min(12,Math.ceil((rem-Math.floor((y-1)*354.367+epoch-epoch))/29.5+1));
-  const d2=Math.floor(jDay-Math.floor((y-1)*354.367+epoch-(m2-1)*29.5));
-  return{day:day||1,month:hijriMonths[month-1]||hijriMonths[0],year:Math.max(1,hijriYear),display:`${day||1} ${hijriMonths[(month-1)||0] } ${Math.max(1,hijriYear)} H`};
+// ─── Hijri via API AlAdhan ────────────────────────────────────────────────
+const hijriCache = {};
+
+async function fetchHijriDate(date) {
+  const key = date.toISOString().split("T")[0];
+  if (hijriCache[key]) return hijriCache[key];
+  try {
+    const [year, month, day] = key.split("-");
+    const url = `https://api.aladhan.com/v1/gToH/${day}-${month}-${year}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    if (json.code === 200) {
+      const h = json.data.hijri;
+      const result = {
+        day: h.day,
+        month: h.month.en,
+        monthAr: h.month.ar,
+        year: h.year,
+        display: `${h.day} ${h.month.en} ${h.year} H`,
+        displayAr: `${h.day} ${h.month.ar} ${h.year} هـ`,
+      };
+      hijriCache[key] = result;
+      return result;
+    }
+  } catch(e) {}
+  return null;
+}
+
+// Fallback local si API indisponible — Algorithme précis Kuwaiti
+function toHijriLocal(date){
+  const jDay = Math.floor(jd(date)) + 0.5;
+  // Algorithme Kuwaiti (précis à ±1 jour)
+  let l = Math.floor(jDay) + 68569;
+  const n = Math.floor((4 * l) / 146097);
+  l = l - Math.floor((146097 * n + 3) / 4);
+  const i = Math.floor((4000 * (l + 1)) / 1461001);
+  l = l - Math.floor((1461 * i) / 4) + 31;
+  const j = Math.floor((80 * l) / 2447);
+  const day = l - Math.floor((2447 * j) / 80);
+  l = Math.floor(j / 11);
+  const month = j + 2 - 12 * l;
+  const year = 100 * (n - 49) + i + l - 6700;
+  // Conversion Grégorien → Hijri
+  const N = Math.floor(jDay) - 1948440 + 10632;
+  const NN = Math.floor((N - 1) / 10631);
+  const Nmod = N - 10631 * NN + 354;
+  const Q = Math.floor((Nmod * 8 + 14816) / 15119);
+  const W = Math.floor((Nmod - Math.floor((15119 * Q + 28) / 8)) / 29.5);
+  const Q1 = W + 1;
+  const hYear = 30 * NN + Q - 30;
+  const hMonth = Math.min(12, Q1 === 13 ? 12 : Q1);
+  const hDay = Math.max(1, Math.floor(Nmod - Math.floor((15119 * Q + 28) / 8) - 29 * (Q1 - 1) - Math.floor((Q1 - 1) / 2)));
+  const hijriMonths = ["Muharram","Safar","Rabi al-Awwal","Rabi al-Thani","Jumada al-Awwal","Jumada al-Thani","Rajab","Sha'ban","Ramadan","Shawwal","Dhu al-Qi'dah","Dhu al-Hijjah"];
+  const hijriMonthsAr = ["مُحَرَّم","صَفَر","رَبِيع الأَوَّل","رَبِيع الثَّانِي","جُمَادَى الأُولَى","جُمَادَى الثَّانِيَة","رَجَب","شَعْبَان","رَمَضَان","شَوَّال","ذُو القَعْدَة","ذُو الحِجَّة"];
+  const safeMonth = Math.max(0, Math.min(11, hMonth - 1));
+  const safeDay = Math.max(1, Math.min(30, hDay));
+  const safeYear = Math.max(1400, hYear);
+  return {
+    day: safeDay,
+    month: hijriMonths[safeMonth],
+    monthAr: hijriMonthsAr[safeMonth],
+    year: safeYear,
+    display: `${safeDay} ${hijriMonths[safeMonth]} ${safeYear} H`,
+    displayAr: `${safeDay} ${hijriMonthsAr[safeMonth]} ${safeYear} هـ`,
+  };
 }
 
 // ─── Prière (approximation) ───────────────────────────────────────────────
@@ -272,7 +314,7 @@ function calcData(date,sys){
   const prog=Math.min(99.9,(m360(lon-manzil.lon)/MS)*100);
   const sunLon=sunLongitude(j);
   const sunSid=m360(sunLon-ay);
-  return{lon:lon.toFixed(2),lonTrop:lt.toFixed(2),lonSid:ls.toFixed(2),aya:ay.toFixed(2),manzilIdx:idx,manzil,progress:prog.toFixed(1),entryTime:transit(date,idx,-1,getLon),exitTime:transit(date,idx,1,getLon),signeTrop:getSigneFromLon(lt),signeSid:getSigneFromLon(ls),moonRise:moonRiseApprox(date),sunLon:sunLon.toFixed(2),sunSid:sunSid.toFixed(2),sunSigne:getSigneFromLon(sys==="sidereal"?sunSid:sunLon),hijri:toHijri(date)};
+  return{lon:lon.toFixed(2),lonTrop:lt.toFixed(2),lonSid:ls.toFixed(2),aya:ay.toFixed(2),manzilIdx:idx,manzil,progress:prog.toFixed(1),entryTime:transit(date,idx,-1,getLon),exitTime:transit(date,idx,1,getLon),signeTrop:getSigneFromLon(lt),signeSid:getSigneFromLon(ls),moonRise:moonRiseApprox(date),sunLon:sunLon.toFixed(2),sunSid:sunSid.toFixed(2),sunSigne:getSigneFromLon(sys==="sidereal"?sunSid:sunLon),hijri:toHijriLocal(date)};
 }
 
 function phase(date){
@@ -341,6 +383,16 @@ function StarField(){
           0%,100%{box-shadow:0 0 0 0 rgba(200,168,76,0.4);}
           50%{box-shadow:0 0 0 8px rgba(200,168,76,0);}
         }
+        @keyframes rotateMoon {
+          from{transform-origin:155px 155px;transform:rotate(0deg);}
+          to{transform-origin:155px 155px;transform:rotate(360deg);}
+        }
+        @keyframes glowPulse {
+          0%,100%{filter:drop-shadow(0 0 4px #C9A84C88);}
+          50%{filter:drop-shadow(0 0 12px #C9A84Ccc);}
+        }
+        .moon-orbit{animation:rotateMoon 60s linear infinite;}
+        .moon-glow{animation:glowPulse 3s ease-in-out infinite;}
         .card-anim{animation:fadeUp 0.4s ease both;}
         .tab-anim{animation:slideTab 0.3s ease both;}
         .moon-float{animation:float 4s ease-in-out infinite;}
@@ -371,6 +423,130 @@ function StarField(){
           opacity:0.6,
         }}/>
       ))}
+    </div>
+  );
+}
+
+// ─── Graphique Cycle Lunaire ─────────────────────────────────────────────
+function LunarCycleChart({date, sys, t}) {
+  const [selDay, setSelDay] = useState(null);
+  const getLon = sys === "sidereal" ? moonSid : moonTrop;
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthNames = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+  const days = Array.from({length: daysInMonth}, (_, i) => {
+    const d = new Date(year, month, i + 1, 12, 0, 0);
+    const ph = phase(d);
+    const lon = getLon(jd(d));
+    const idx = mIdx(lon);
+    const m = MANAZIL[idx];
+    return { day: i + 1, date: d, age: parseFloat(ph.age), pct: ph.pct, emoji: ph.emoji, name: ph.name, manzil: m, idx };
+  });
+
+  const isToday = (d) => d.date.getDate() === date.getDate() && d.date.getMonth() === date.getMonth() && d.date.getFullYear() === date.getFullYear();
+
+  const W = 320, H = 120, PAD = 24;
+  const chartW = W - PAD * 2;
+  const chartH = H - 20;
+
+  // Points pour la courbe d'illumination
+  const points = days.map((d, i) => {
+    const x = PAD + (i / (daysInMonth - 1)) * chartW;
+    const y = H - 16 - (d.pct / 100) * chartH;
+    return { x, y, ...d };
+  });
+
+  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  const areaD = `${pathD} L ${points[points.length-1].x} ${H-16} L ${points[0].x} ${H-16} Z`;
+
+  const selected = selDay ? days.find(d => d.day === selDay) : days.find(d => isToday(d));
+
+  return (
+    <div style={{background:t.cardBg, border:`1px solid ${t.accent}33`, borderRadius:14, padding:"14px", marginBottom:12}}>
+      <div style={{fontSize:11, color:t.accent, fontWeight:"bold", marginBottom:8, letterSpacing:2}}>
+        📊 CYCLE LUNAIRE — {monthNames[month]} {year}
+      </div>
+
+      {/* Graphique SVG */}
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{display:"block", margin:"0 auto", overflow:"visible"}}>
+        <defs>
+          <linearGradient id="lunarGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={t.accent} stopOpacity="0.4"/>
+            <stop offset="100%" stopColor={t.accent} stopOpacity="0.02"/>
+          </linearGradient>
+        </defs>
+        {/* Lignes de grille */}
+        {[0,25,50,75,100].map(pct => {
+          const y = H - 16 - (pct/100)*chartH;
+          return <line key={pct} x1={PAD} y1={y} x2={W-PAD} y2={y} stroke={`${t.accent}18`} strokeWidth="0.5" strokeDasharray="3,3"/>;
+        })}
+        {/* Labels % */}
+        {[0,50,100].map(pct => {
+          const y = H - 16 - (pct/100)*chartH;
+          return <text key={pct} x={PAD-4} y={y+4} textAnchor="end" fontSize="8" fill={t.textMuted}>{pct}%</text>;
+        })}
+        {/* Aire sous la courbe */}
+        <path d={areaD} fill="url(#lunarGrad)"/>
+        {/* Courbe principale */}
+        <path d={pathD} fill="none" stroke={t.accent} strokeWidth="2" strokeLinejoin="round"/>
+        {/* Points phases spéciales */}
+        {points.map((p, i) => {
+          const isSpecial = [0,1,2,7,8,14,15,16,22,23,28,29].includes(i);
+          const isSel = p.day === (selDay || days.find(d=>isToday(d))?.day);
+          if (!isSpecial && !isSel) return null;
+          return (
+            <g key={i} onClick={()=>setSelDay(p.day)} style={{cursor:"pointer"}}>
+              <circle cx={p.x} cy={p.y} r={isSel?6:3}
+                fill={isSel?t.accentSoft:t.accent}
+                stroke={isSel?"white":t.accent}
+                strokeWidth={isSel?2:0}/>
+              {isSel && <text x={p.x} y={p.y-10} textAnchor="middle" fontSize="12">{p.emoji}</text>}
+            </g>
+          );
+        })}
+        {/* Ligne du jour sélectionné */}
+        {(() => {
+          const sel = points.find(p => p.day === (selDay || days.find(d=>isToday(d))?.day));
+          if (!sel) return null;
+          return <line x1={sel.x} y1={16} x2={sel.x} y2={H-16} stroke={t.accentSoft} strokeWidth="1" strokeDasharray="4,3" opacity="0.7"/>;
+        })()}
+        {/* Labels jours (1, 7, 14, 21, 28) */}
+        {[1,7,14,21,daysInMonth].map(day => {
+          const p = points.find(pt => pt.day === day);
+          if (!p) return null;
+          return <text key={day} x={p.x} y={H-2} textAnchor="middle" fontSize="8" fill={t.textMuted}>{day}</text>;
+        })}
+        {/* Émojis phases clés */}
+        {points.filter(p => [1,8,15,22].includes(p.day)).map(p => (
+          <text key={p.day} x={p.x} y={H-6} textAnchor="middle" fontSize="9">{p.emoji}</text>
+        ))}
+      </svg>
+
+      {/* Info du jour sélectionné */}
+      {selected && (
+        <div style={{background:t.rowBg, border:`1px solid ${NC[selected.manzil.nature]||t.accent}33`, borderRadius:10, padding:"10px", marginTop:8, display:"flex", alignItems:"center", gap:10}}>
+          <div style={{textAlign:"center", minWidth:44}}>
+            <div style={{fontSize:22}}>{selected.emoji}</div>
+            <div style={{fontSize:10, color:t.textMuted, fontWeight:"bold"}}>{selected.day}/{month+1}</div>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12, color:t.accentSoft, fontWeight:"bold", marginBottom:2}}>{selected.name} · {selected.pct}%</div>
+            <div style={{fontSize:11, color:t.accentSoft, direction:"rtl", marginBottom:1}}>{selected.manzil.ar}</div>
+            <div style={{fontSize:10, color:t.textMuted, fontWeight:"bold"}}>{selected.manzil.fr} · #{selected.idx+1}</div>
+          </div>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:9, color:NC[selected.manzil.nature]||t.accent, fontWeight:"bold",
+              background:`${NC[selected.manzil.nature]||t.accent}22`, borderRadius:20, padding:"3px 8px", border:`1px solid ${NC[selected.manzil.nature]||t.accent}44`}}>
+              {selected.manzil.nature}
+            </div>
+          </div>
+        </div>
+      )}
+      <div style={{fontSize:9, color:t.textMuted, textAlign:"center", marginTop:6, fontWeight:"bold"}}>
+        Clique sur un point pour voir les détails
+      </div>
     </div>
   );
 }
@@ -432,7 +608,7 @@ function ManzilWheel({md,t}){
             </g>
           );
         })}
-        {(()=>{const ma=tr(lon-90);const mx=cx+mR*Math.cos(ma),my=cy+mR*Math.sin(ma);return(<g filter="url(#glow)"><circle cx={mx} cy={my} r={dotR+3} fill="#C9A84C22"/><circle cx={mx} cy={my} r={dotR} fill="#e8c97a" stroke="#C9A84C" strokeWidth="1.5"/><text x={mx} y={my} textAnchor="middle" dominantBaseline="middle" fontSize={dotR*1.1} fill="#07061a">☽</text></g>);})()}
+        {(()=>{const ma=tr(lon-90);const mx=cx+mR*Math.cos(ma),my=cy+mR*Math.sin(ma);return(<g className="moon-glow"><circle cx={mx} cy={my} r={dotR+5} fill="#C9A84C11"/><circle cx={mx} cy={my} r={dotR+2} fill="#C9A84C22"/><circle cx={mx} cy={my} r={dotR} fill="#e8c97a" stroke="#C9A84C" strokeWidth="2"/><text x={mx} y={my} textAnchor="middle" dominantBaseline="middle" fontSize={dotR*1.2} fill="#07061a">☽</text></g>);})()}
         <circle cx={cx} cy={cy} r={iR-2} fill="#07061a" opacity="0.85"/>
         <text x={cx} y={cy-8} textAnchor="middle" fontSize={sz*0.034} fill="#C9A84C" fontWeight="bold">مَنَازِل</text>
         <text x={cx} y={cy+9} textAnchor="middle" fontSize={sz*0.026} fill="#e8c97a88">القَمَر</text>
@@ -600,7 +776,7 @@ function PrayerView({t,date}){
       {/* Date Hijri */}
       <div style={{background:t.rowBg,border:`1px solid ${t.accent}33`,borderRadius:10,padding:"10px 14px",marginBottom:12,textAlign:"center"}}>
         <div style={{fontSize:13,fontWeight:"bold",color:t.accentSoft}}>{date.toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})}</div>
-        <div style={{fontSize:13,fontWeight:"bold",color:t.accent,marginTop:4}}>{toHijri(date).display}</div>
+        <div style={{fontSize:13,fontWeight:"bold",color:t.accent,marginTop:4}}>{hijriDate?.display||toHijriLocal(date).display}</div>
       </div>
 
       {/* Sélecteur ville */}
@@ -729,7 +905,7 @@ function ShareBtn({md,ph,t}){
   const share=()=>{
     if(!md)return;
     const m=md.manzil;
-    const text=`🌙 *Manāzil Al-Qamar du jour*\n\n📅 ${new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})}\n${md.hijri?.display||""}\n\n🕌 *Manzil #${md.manzilIdx+1}* — ${m.ar}\n✦ ${m.fr} · ${m.symbole}\n📊 ${m.nature} · ${m.element} · ${m.planete}\n\n${ph.emoji} Phase : ${ph.name} (${ph.age} jours)\n⏰ Entrée : ${fmtT(md.entryTime)} · Sortie : ${fmtT(md.exitTime)}\n\n✅ ${m.favorables.slice(0,2).join(", ")}\n❌ ${m.defavorables.slice(0,2).join(", ")}\n\n🤲 Du'a : ${DUAS[md.manzilIdx].fr}\n\n🔗 *manazil-senastro.com*`;
+    const text=`🌙 *Manāzil Al-Qamar du jour*\n\n📅 ${new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})}\n${hijriDate?.display||""}\n\n🕌 *Manzil #${md.manzilIdx+1}* — ${m.ar}\n✦ ${m.fr} · ${m.symbole}\n📊 ${m.nature} · ${m.element} · ${m.planete}\n\n${ph.emoji} Phase : ${ph.name} (${ph.age} jours)\n⏰ Entrée : ${fmtT(md.entryTime)} · Sortie : ${fmtT(md.exitTime)}\n\n✅ ${m.favorables.slice(0,2).join(", ")}\n❌ ${m.defavorables.slice(0,2).join(", ")}\n\n🤲 Du'a : ${DUAS[md.manzilIdx].fr}\n\n🔗 *manazil-senastro.com*`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,"_blank");
   };
   return(
@@ -864,6 +1040,7 @@ function MonthCal({selDate,setSelDate,sys,setTab,t}){
   return(
     <div>
       <h3 style={{color:t.accent,fontSize:13,letterSpacing:2,marginBottom:12,fontWeight:"bold"}}>📅 Calendrier Lunaire</h3>
+      <LunarCycleChart date={selDate} sys={sys} t={t}/>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
         <button onClick={()=>setVd(new Date(Y,M-1,1))} style={{background:t.rowBg,border:`1px solid ${t.accent}33`,borderRadius:8,padding:"6px 12px",color:t.accentSoft,cursor:"pointer",fontSize:14}}>◀</button>
         <span style={{color:t.accentSoft,fontSize:14,fontWeight:"bold"}}>{mn[M]} {Y}</span>
@@ -987,15 +1164,28 @@ export default function App(){
   };
   const changeTab=newTab=>{setPrevTab(tab);setTab(newTab);};
 
+  const [hijriDate,setHijriDate]=useState(null);
+
   const compute=useCallback((d,s)=>{setLoading(true);setTimeout(()=>{setMd(calcData(d,s));setLoading(false);},250);},[]);
   useEffect(()=>{compute(selDate,sys);},[selDate,sys]);
+
+  // Charger date Hijri via API
+  useEffect(()=>{
+    setHijriDate(null);
+    fetchHijriDate(selDate).then(result=>{
+      if(result){
+        setHijriDate(result);
+      } else {
+        setHijriDate(toHijriLocal(selDate));
+      }
+    });
+  },[selDate]);
 
   // Détection nouvelle version → rechargement automatique
   useEffect(()=>{
     if("serviceWorker" in navigator){
       navigator.serviceWorker.addEventListener("message",event=>{
         if(event.data?.type==="NEW_VERSION"){
-          // Nouvelle version disponible → recharge silencieusement
           window.location.reload();
         }
       });
@@ -1019,23 +1209,22 @@ export default function App(){
         </div>
         <h1 style={{margin:"0 0 3px",fontSize:26,fontWeight:"600",color:t.accentSoft,textShadow:`0 0 40px ${t.accent}66`,letterSpacing:2}}>مَنَازِل القَمَر</h1>
         <p style={{margin:0,fontSize:12,fontWeight:"600",color:t.textMuted,letterSpacing:4,textTransform:"uppercase"}}>Stations Lunaires</p>
-        {md?.hijri&&<div style={{fontSize:12,fontWeight:"bold",color:t.accent,marginTop:4}}>{md.hijri.display}</div>}
+        {hijriDate&&<div style={{fontSize:12,fontWeight:"bold",color:t.accent,marginTop:4}}>{hijriDate.displayAr||hijriDate.display}</div>}
       </header>
 
       <div style={{display:"flex",gap:5,padding:"8px 12px",background:t.tabsBg,borderBottom:`1px solid ${t.tabBorder}`,alignItems:"center"}}>
-      {/* BANNIÈRE PUB */}
-      <div onClick={()=>window.open("https://wa.me/221764265550","_blank")} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:"linear-gradient(135deg,#1a0a00 0%,#2d1500 50%,#1a0a00 100%)",borderBottom:"2px solid #C9A84C",cursor:"pointer"}}>
-        <div style={{fontSize:26}}>📚</div>
-        <div style={{flex:1}}>
-          <div style={{fontSize:13,color:"#e8c97a",fontWeight:"bold",marginBottom:3}}>Les Manâzil Al-Qamar</div>
-          <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <span style={{fontSize:13,color:"#C9A84C",fontWeight:"bold"}}>🇫🇷 FR + 🌍 Wolof</span>
-            <span style={{fontSize:12,background:"#2ecc71",color:"white",borderRadius:10,padding:"1px 7px",fontWeight:"bold"}}>-50%</span>
-          </div>
+      {/* BANNIÈRE PUB COMPACTE */}
+      <div onClick={()=>window.open("https://wa.me/221764265550","_blank")}
+        style={{display:"flex",alignItems:"center",gap:10,padding:"6px 12px",background:"linear-gradient(90deg,#1a0a00 0%,#2d1500 50%,#1a0a00 100%)",borderBottom:"1px solid #C9A84C66",cursor:"pointer"}}>
+        <span style={{fontSize:16}}>📚</span>
+        <div style={{flex:1,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <span style={{fontSize:12,color:"#e8c97a",fontWeight:"bold"}}>Manâzil Al-Qamar</span>
+          <span style={{fontSize:10,color:"#C9A84C",fontWeight:"bold"}}>🇫🇷+🌍</span>
+          <span style={{fontSize:9,background:"#2ecc71",color:"white",borderRadius:10,padding:"1px 6px",fontWeight:"bold"}}>-50%</span>
         </div>
-        <div style={{textAlign:"center"}}>
-          <div style={{fontSize:13,color:"#e8c97a",fontWeight:"bold",marginBottom:3}}>6.900 F</div>
-          <div style={{fontSize:12,background:"#25D366",color:"white",borderRadius:8,padding:"5px 9px",fontWeight:"bold"}}>📲 Commander</div>
+        <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+          <span style={{fontSize:12,color:"#e8c97a",fontWeight:"bold"}}>6.900F</span>
+          <span style={{fontSize:10,background:"#25D366",color:"white",borderRadius:8,padding:"4px 8px",fontWeight:"bold"}}>📲</span>
         </div>
       </div>
       </div>
@@ -1055,11 +1244,19 @@ export default function App(){
       </div>
 
       <div style={{display:"flex",background:t.tabsBg,borderBottom:`1px solid ${t.tabBorder}`,overflowX:"auto"}}>
-        {TABS.map(([k,l])=><button key={k} style={{flexShrink:0,padding:"14px 12px",background:tab===k?`${t.accent}18`:"none",border:"none",borderBottom:tab===k?`3px solid ${t.accent}`:"3px solid transparent",color:tab===k?t.accentSoft:t.textMuted,cursor:"pointer",fontSize:13,fontWeight:tab===k?"bold":"600",fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:0.3,transition:"all 0.2s"}} onClick={()=>changeTab(k)}>{l}</button>)}
+        {TABS.map(([k,l])=>{
+          const showBadge = k==="dua" && md?.exitTime && (new Date(md.exitTime)-new Date())<30*60*1000 && (new Date(md.exitTime)-new Date())>0;
+          return(
+            <button key={k} style={{flexShrink:0,padding:"14px 12px",background:tab===k?`${t.accent}18`:"none",border:"none",borderBottom:tab===k?`3px solid ${t.accent}`:"3px solid transparent",color:tab===k?t.accentSoft:t.textMuted,cursor:"pointer",fontSize:13,fontWeight:tab===k?"bold":"600",fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:0.3,transition:"all 0.2s",position:"relative"}} onClick={()=>changeTab(k)}>
+              {l}
+              {showBadge&&<span style={{position:"absolute",top:6,right:4,width:8,height:8,background:"#e07a5f",borderRadius:"50%",animation:"pulse 1s infinite"}}/>}
+            </button>
+          );
+        })}
       </div>
 
       <div style={{padding:"12px 12px 90px",animation:"fadeUp 0.35s ease both"}} key={tab}>
-        {tab==="today"&&<TodayView md={md} loading={loading} ph={ph} sys={sys} selDate={selDate} ds={ds} ts={ts} t={t} onDC={e=>{const d=new Date(e.target.value);d.setHours(selDate.getHours(),selDate.getMinutes());setSelDate(d);}} onTC={e=>{const[h,m]=e.target.value.split(":").map(Number);const d=new Date(selDate);d.setHours(h,m,0);setSelDate(d);}}/>}
+        {tab==="today"&&<TodayView md={md} loading={loading} ph={ph} sys={sys} selDate={selDate} ds={ds} ts={ts} t={t} hijriDate={hijriDate} onDC={e=>{const d=new Date(e.target.value);d.setHours(selDate.getHours(),selDate.getMinutes());setSelDate(d);}} onTC={e=>{const[h,m]=e.target.value.split(":").map(Number);const d=new Date(selDate);d.setHours(h,m,0);setSelDate(d);}}/>}
         {tab==="natal"&&<NatalView sys={sys} t={t}/>}
 
         {tab==="dua"&&<DuaView md={md} t={t}/>}
@@ -1112,7 +1309,7 @@ function WheelView({md,ph,t}){
   );
 }
 
-function TodayView({md,loading,ph,sys,selDate,ds,ts,t,onDC,onTC}){
+function TodayView({md,loading,ph,sys,selDate,ds,ts,t,hijriDate,onDC,onTC}){
   return(
     <div>
       {/* ── MANZIL DU JOUR EN PREMIER ── */}
@@ -1156,7 +1353,7 @@ function TodayView({md,loading,ph,sys,selDate,ds,ts,t,onDC,onTC}){
             <div style={{flex:1}}>
               <div style={{fontSize:13,fontWeight:"bold",color:t.accentSoft,marginBottom:2}}>{ph.name}</div>
               <div style={{fontSize:12,fontWeight:"600",color:t.textMuted,marginBottom:2}}>{selDate.toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})}</div>
-              <div style={{fontSize:12,fontWeight:"bold",color:t.accent}}>{md.hijri?.display}</div>
+              <div style={{fontSize:12,fontWeight:"bold",color:t.accent}}>{hijriDate?.displayAr||hijriDate?.display||"..."}</div>
               <div style={{fontSize:12,fontWeight:"600",color:t.textMuted}}>Âge : {ph.age}j · {ph.pct}% illuminé</div>
             </div>
             <div style={{fontSize:11,color:t.deepBlue,background:t.accent,borderRadius:20,padding:"2px 6px"}}>{sys==="sidereal"?"Sidéral":"Tropical"}</div>
