@@ -1513,26 +1513,22 @@ export default function App(){
         )}
       </header>
 
-      <div style={{display:"flex",gap:5,padding:"8px 12px",background:t.tabsBg,borderBottom:`1px solid ${t.tabBorder}`,alignItems:"center"}}>
       {/* BANNIÈRE PUB COMPACTE */}
-      <div style={{padding:"6px 12px",background:"linear-gradient(90deg,#1a0a00 0%,#2d1500 50%,#1a0a00 100%)",borderBottom:"1px solid #C9A84C66"}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:6}}>
-        <span style={{fontSize:16}}>📚</span>
-        <div style={{flex:1,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-          <span style={{fontSize:12,color:"#e8c97a",fontWeight:"bold"}}>Manâzil Al-Qamar</span>
-          <span style={{fontSize:10,color:"#C9A84C",fontWeight:"bold"}}>🇫🇷+🌍</span>
-          <span style={{fontSize:9,background:"#2ecc71",color:"white",borderRadius:10,padding:"1px 6px",fontWeight:"bold"}}>-50%</span>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-          <span style={{fontSize:12,color:"#e8c97a",fontWeight:"bold"}}>6.900F</span>
-          <span style={{fontSize:10,background:"#25D366",color:"white",borderRadius:8,padding:"4px 8px",fontWeight:"bold"}}>📲</span>
-        </div>
+      <div style={{padding:"8px 12px",background:"linear-gradient(90deg,#1a0a00 0%,#2d1500 50%,#1a0a00 100%)",borderBottom:"1px solid #C9A84C66"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+          <span style={{fontSize:16}}>📚</span>
+          <div style={{flex:1,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+            <span style={{fontSize:12,color:"#e8c97a",fontWeight:"bold"}}>Manâzil Al-Qamar</span>
+            <span style={{fontSize:9,background:"#2ecc71",color:"white",borderRadius:10,padding:"1px 6px",fontWeight:"bold"}}>-50%</span>
+            <span style={{fontSize:12,color:"#e8c97a",fontWeight:"bold"}}>6.900F</span>
+          </div>
         </div>
         <div style={{display:"flex",gap:6}}>
-          <button onClick={()=>window.open("https://iqbmnusp.mychariow.shop/","_blank")} style={{flex:1,background:"#C9A84C",border:"none",borderRadius:6,padding:"5px",color:"#1a0a00",fontSize:10,fontWeight:"bold",cursor:"pointer",fontFamily:"inherit"}}>🛒 Chariow</button>
-          <button onClick={()=>window.open("https://wa.me/221764265550","_blank")} style={{flex:1,background:"#25D366",border:"none",borderRadius:6,padding:"5px",color:"white",fontSize:10,fontWeight:"bold",cursor:"pointer",fontFamily:"inherit"}}>📲 WhatsApp</button>
+          <button onClick={()=>window.open("https://iqbmnusp.mychariow.shop/","_blank")} style={{flex:1,background:"#C9A84C",border:"none",borderRadius:6,padding:"6px",color:"#1a0a00",fontSize:11,fontWeight:"bold",cursor:"pointer",fontFamily:"inherit"}}>🛒 Chariow</button>
+          <button onClick={()=>window.open("https://wa.me/221764265550","_blank")} style={{flex:1,background:"#25D366",border:"none",borderRadius:6,padding:"6px",color:"white",fontSize:11,fontWeight:"bold",cursor:"pointer",fontFamily:"inherit"}}>📲 WhatsApp</button>
         </div>
       </div>
+      <div style={{display:"flex",gap:5,padding:"8px 12px",background:t.tabsBg,borderBottom:`1px solid ${t.tabBorder}`,alignItems:"center"}}>
 
       <div style={{display:"flex",gap:6,padding:"8px 12px",background:`${t.tabsBg}99`,borderBottom:`1px solid ${t.tabBorder}`}}>
         {[["sidereal","☽","Sidéral","Arabo-islamique"],["tropical","☀","Tropical","Occidental"]].map(([k,icon,title,sub])=>(
