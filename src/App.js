@@ -919,13 +919,18 @@ function ShareBtn({md,ph,t}){
 // ─── Pub ──────────────────────────────────────────────────────────────────
 function BookAd(){
   return(
-    <div style={{background:"linear-gradient(135deg,#1a0a00,#2d1500,#1a0a00)",border:"1px solid #C9A84C88",borderRadius:12,padding:"12px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:12,cursor:"pointer"}} onClick={()=>window.open("https://wa.me/221764265550","_blank")}>
-      <span style={{fontSize:24}}>📚</span>
+    <div style={{background:"linear-gradient(135deg,#1a0a00,#2d1500,#1a0a00)",border:"1px solid #C9A84C88",borderRadius:12,padding:"12px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+      <span style={{fontSize:22}}>📚</span>
       <div style={{flex:1}}>
         <div style={{fontSize:13,color:"#e8c97a",fontWeight:"bold",marginBottom:2}}>Les Manâzil Al-Qamar</div>
-        <div style={{fontSize:12,color:"#C9A84C88"}}>Livre FR & Wolof — dès 6.900 FCFA</div>
+        <div style={{fontSize:10,color:"#C9A84C88",fontWeight:"bold"}}>Livre FR & Wolof — dès 6.900 FCFA</div>
       </div>
-      <div style={{fontSize:12,background:"#25D366",color:"white",borderRadius:20,padding:"4px 10px",whiteSpace:"nowrap"}}>Commander</div>
+      </div>
+      <div style={{display:"flex",gap:6}}>
+        <button onClick={()=>window.open("https://iqbmnusp.mychariow.shop/","_blank")} style={{flex:1,background:"#C9A84C",border:"none",borderRadius:7,padding:"7px",color:"#1a0a00",fontSize:10,fontWeight:"bold",cursor:"pointer",fontFamily:"inherit"}}>🛒 Chariow</button>
+        <button onClick={()=>window.open("https://wa.me/221764265550","_blank")} style={{flex:1,background:"#25D366",border:"none",borderRadius:7,padding:"7px",color:"white",fontSize:10,fontWeight:"bold",cursor:"pointer",fontFamily:"inherit"}}>📲 WhatsApp</button>
+      </div>
     </div>
   );
 }
@@ -1138,6 +1143,297 @@ function NotifManager({t}){
 }
 
 // ─── App ──────────────────────────────────────────────────────────────────
+// ─── Heures Planétaires ───────────────────────────────────────────────────
+// Les 7 planètes classiques dans l'ordre chaldéen
+const CHALDEAN = ["Saturne","Jupiter","Mars","Soleil","Vénus","Mercure","Lune"];
+const CHALDEAN_AR = ["زُحَل","المُشْتَري","المِرِّيخ","الشَّمْس","الزُّهَرَة","عُطَارِد","القَمَر"];
+const PLANET_EMOJI = ["🪐","♃","♂","☀️","♀️","☿","🌙"];
+const PLANET_COLORS = ["#8a9fc4","#e8c97a","#e07a5f","#FFD700","#4ecf8a","#a0c4ff","#C9A84C"];
+
+// Jour de la semaine → planète dirigeante (tradition)
+// 0=Dim(Soleil), 1=Lun(Lune), 2=Mar(Mars), 3=Mer(Mercure), 4=Jeu(Jupiter), 5=Ven(Vénus), 6=Sam(Saturne)
+const DAY_RULERS = [3, 6, 2, 5, 1, 4, 0]; // index dans CHALDEAN
+const DAY_RULERS_NAMES_FR = ["Soleil","Lune","Mars","Mercure","Jupiter","Vénus","Saturne"];
+const DAY_RULERS_NAMES_AR = ["الشَّمْس","القَمَر","المِرِّيخ","عُطَارِد","المُشْتَري","الزُّهَرَة","زُحَل"];
+const DAY_NAMES_FR = ["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
+
+function computePlanetaryHours(date, sunrise="05:46", sunset="19:35") {
+  // Convertir sunrise/sunset en minutes
+  const toMin = s => {
+    const parts = s.split(":");
+    return parseInt(parts[0])*60 + parseInt(parts[1]);
+  };
+  const sunriseMin = toMin(sunrise);
+  const sunsetMin = toMin(sunset);
+  const dayLen = sunsetMin - sunriseMin; // durée du jour en minutes
+  const nightLen = 24*60 - dayLen; // durée de la nuit
+  const dayHourLen = dayLen / 12; // durée d'une heure planétaire diurne
+  const nightHourLen = nightLen / 12; // durée d'une heure planétaire nocturne
+
+  const dow = date.getDay(); // 0=Dim...6=Sam
+  const rulerIdx = DAY_RULERS[dow]; // Index dans CHALDEAN du planète du jour
+
+  const toTime = mins => {
+    const h = Math.floor(((mins % 1440) + 1440) % 1440 / 60);
+    const m = Math.floor(((mins % 1440) + 1440) % 1440 % 60);
+    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+  };
+
+  const hours = [];
+  // 12 heures diurnes (du lever au coucher)
+  for (let i = 0; i < 12; i++) {
+    const planetIdx = (rulerIdx + i) % 7;
+    const start = sunriseMin + i * dayHourLen;
+    const end = start + dayHourLen;
+    hours.push({
+      num: i + 1,
+      period: "jour",
+      planet: CHALDEAN[planetIdx],
+      planetAr: CHALDEAN_AR[planetIdx],
+      emoji: PLANET_EMOJI[planetIdx],
+      color: PLANET_COLORS[planetIdx],
+      start: toTime(start),
+      end: toTime(end),
+      startMin: start,
+      endMin: end,
+    });
+  }
+  // 12 heures nocturnes (du coucher au lever)
+  const nightRulerIdx = (rulerIdx + 12) % 7;
+  for (let i = 0; i < 12; i++) {
+    const planetIdx = (nightRulerIdx + i) % 7;
+    const start = sunsetMin + i * nightHourLen;
+    const end = start + nightHourLen;
+    hours.push({
+      num: i + 13,
+      period: "nuit",
+      planet: CHALDEAN[planetIdx],
+      planetAr: CHALDEAN_AR[planetIdx],
+      emoji: PLANET_EMOJI[planetIdx],
+      color: PLANET_COLORS[planetIdx],
+      start: toTime(start),
+      end: toTime(end),
+      startMin: start,
+      endMin: end,
+    });
+  }
+  return { hours, dayRuler: CHALDEAN[rulerIdx], dayRulerAr: CHALDEAN_AR[rulerIdx], dayRulerEmoji: PLANET_EMOJI[rulerIdx], dayRulerColor: PLANET_COLORS[rulerIdx], dayHourLen: dayHourLen.toFixed(0), nightHourLen: nightHourLen.toFixed(0) };
+}
+
+// Significations des planètes dans les heures
+const PLANET_MEANINGS = {
+  "Soleil": { action: "Leadership, succès, demandes aux dirigeants, contrats importants, santé", eviter: "Humilité, travaux cachés", islamique: "Heure du Dimanche — Lumière divine, victoire et gloire" },
+  "Lune": { action: "Voyages, commerce, agriculture, mariage, affaires familiales", eviter: "Conflits, décisions définitives", islamique: "Heure du Lundi — Bénédiction lunaire, fertilité et flux" },
+  "Mars": { action: "Courage, défense, chirurgie, confrontation nécessaire", eviter: "Mariage, partenariats, voyages de plaisir", islamique: "Heure du Mardi — Force martiale, protection et défense" },
+  "Mercure": { action: "Commerce, écriture, communication, études, contrats", eviter: "Affaires secrètes, actions instinctives", islamique: "Heure du Mercredi — Intelligence mercurielle, parole et échange" },
+  "Jupiter": { action: "Expansion, richesse, justice, demandes de grâce, éducation", eviter: "Rien de particulier — planète bénéfique", islamique: "Heure du Jeudi — Fortune jupitérienne, sagesse et abondance" },
+  "Vénus": { action: "Amour, mariage, art, bijoux, réconciliation, beauté", eviter: "Conflits, destructions", islamique: "Heure du Vendredi — Grâce vénusienne, amour et harmonie" },
+  "Saturne": { action: "Travaux longs, fondations, agriculture profonde, mines", eviter: "Voyages, mariage, nouvelles entreprises", islamique: "Heure du Samedi — Rigueur saturnienne, patience et fondations" },
+};
+
+function PlanetaryHoursView({ t, date }) {
+  const [sunrise, setSunrise] = useState("05:46");
+  const [sunset, setSunset] = useState("19:35");
+  const [tradition, setTradition] = useState("both");
+  const [selectedHour, setSelectedHour] = useState(null);
+
+  const data = computePlanetaryHours(date, sunrise, sunset);
+  const dow = date.getDay();
+
+  // Heure actuelle en minutes
+  const now = new Date();
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  const isToday = date.toDateString() === now.toDateString();
+
+  // Trouver l'heure actuelle
+  const currentHourIdx = isToday ? data.hours.findIndex(h => nowMin >= h.startMin && nowMin < h.endMin) : -1;
+  const currentHour = currentHourIdx >= 0 ? data.hours[currentHourIdx] : null;
+
+  return (
+    <div>
+      <h3 style={{color:t.accent,fontSize:13,letterSpacing:2,marginBottom:8,fontWeight:"bold",textAlign:"center"}}>⏰ Heures Planétaires</h3>
+      <p style={{fontSize:10,color:t.textMuted,marginBottom:12,lineHeight:1.6,fontWeight:"bold",textAlign:"center"}}>
+        Chaque heure du jour est gouvernée par une planète selon la tradition chaldéenne arabo-islamique.
+      </p>
+
+      {/* Planète du jour */}
+      <div style={{background:`linear-gradient(135deg,${data.dayRulerColor}22,${data.dayRulerColor}08)`,border:`2px solid ${data.dayRulerColor}66`,borderRadius:16,padding:"14px",marginBottom:12,textAlign:"center"}}>
+        <div style={{fontSize:11,color:t.textMuted,fontWeight:"bold",marginBottom:6,letterSpacing:2}}>PLANÈTE DU JOUR</div>
+        <div style={{fontSize:11,color:t.textMuted,fontWeight:"bold",marginBottom:4}}>{DAY_NAMES_FR[dow]}</div>
+        <div style={{fontSize:36,marginBottom:4}}>{data.dayRulerEmoji}</div>
+        <div style={{fontSize:20,color:data.dayRulerColor,fontWeight:"bold",marginBottom:2}}>{data.dayRuler}</div>
+        <div style={{fontSize:16,color:data.dayRulerColor,direction:"rtl",marginBottom:8}}>{data.dayRulerAr}</div>
+        <div style={{display:"flex",justifyContent:"center",gap:12}}>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:9,color:t.textMuted,fontWeight:"bold"}}>Heure diurne</div>
+            <div style={{fontSize:13,color:t.accentSoft,fontWeight:"bold"}}>{data.dayHourLen} min</div>
+          </div>
+          <div style={{width:1,background:`${t.accent}33`}}/>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:9,color:t.textMuted,fontWeight:"bold"}}>Heure nocturne</div>
+            <div style={{fontSize:13,color:t.accentSoft,fontWeight:"bold"}}>{data.nightHourLen} min</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Heure planétaire actuelle */}
+      {currentHour&&(
+        <div style={{background:`${currentHour.color}22`,border:`2px solid ${currentHour.color}`,borderRadius:14,padding:"12px",marginBottom:12,textAlign:"center",animation:"pulse 2s infinite"}}>
+          <div style={{fontSize:10,color:currentHour.color,fontWeight:"bold",marginBottom:4}}>⚡ HEURE EN COURS — #{currentHour.num}</div>
+          <div style={{fontSize:28,marginBottom:4}}>{currentHour.emoji}</div>
+          <div style={{fontSize:18,color:currentHour.color,fontWeight:"bold",marginBottom:2}}>{currentHour.planet}</div>
+          <div style={{fontSize:14,color:currentHour.color,direction:"rtl",marginBottom:6}}>{currentHour.planetAr}</div>
+          <div style={{fontSize:12,color:t.textMuted,fontWeight:"bold"}}>{currentHour.start} — {currentHour.end}</div>
+          <div style={{fontSize:10,color:t.textMuted,marginTop:6,lineHeight:1.5,fontWeight:"bold"}}>{PLANET_MEANINGS[currentHour.planet]?.action}</div>
+        </div>
+      )}
+
+      {/* Lever/Coucher personnalisables */}
+      <div style={{background:t.rowBg,border:`1px solid ${t.accent}33`,borderRadius:12,padding:"12px",marginBottom:12}}>
+        <div style={{fontSize:10,color:t.accent,fontWeight:"bold",marginBottom:8}}>🌅 Ajuster lever/coucher du Soleil</div>
+        <div style={{display:"flex",gap:10}}>
+          {[["🌅 Lever",sunrise,setSunrise],["🌇 Coucher",sunset,setSunset]].map(([label,val,setVal])=>(
+            <div key={label} style={{flex:1,textAlign:"center"}}>
+              <div style={{fontSize:10,color:t.textMuted,fontWeight:"bold",marginBottom:4}}>{label}</div>
+              <input type="time" value={val} onChange={e=>setVal(e.target.value)}
+                style={{background:t.cardBg||t.rowBg,border:`1px solid ${t.accent}44`,borderRadius:8,padding:"6px 8px",color:t.textLight,fontSize:13,fontWeight:"bold",fontFamily:"inherit",outline:"none",colorScheme:t.inputColor,width:"100%",textAlign:"center"}}/>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Toggle tradition */}
+      <div style={{display:"flex",gap:6,marginBottom:12}}>
+        {[["both","🌍 Les deux"],["islamic","🕌 Islamique"],["western","⭐ Occidental"]].map(([k,l])=>(
+          <button key={k} onClick={()=>setTradition(k)}
+            style={{flex:1,padding:"8px 4px",background:tradition===k?`${t.accent}22`:"none",border:tradition===k?`1px solid ${t.accent}99`:`1px solid ${t.accent}22`,borderRadius:8,color:tradition===k?t.accentSoft:t.textMuted,fontSize:10,fontWeight:"bold",cursor:"pointer",fontFamily:"inherit"}}>
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {/* Liste des 24 heures */}
+      <div style={{marginBottom:12}}>
+        {/* Heures diurnes */}
+        <div style={{fontSize:11,color:t.accent,fontWeight:"bold",marginBottom:8,letterSpacing:1}}>☀️ HEURES DIURNES (1-12)</div>
+        {data.hours.slice(0,12).map((h,i)=>{
+          const isCurrent = i === currentHourIdx;
+          const meaning = PLANET_MEANINGS[h.planet];
+          const isSelected = selectedHour === i;
+          return(
+            <div key={i} onClick={()=>setSelectedHour(isSelected?null:i)}
+              style={{background:isCurrent?`${h.color}33`:isSelected?`${h.color}18`:t.rowBg,border:`1px solid ${isCurrent?h.color:isSelected?h.color+"66":t.accent+"22"}`,borderRadius:10,padding:"10px 12px",marginBottom:6,cursor:"pointer",transition:"all 0.2s"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{fontSize:11,color:t.textMuted,fontWeight:"bold",minWidth:20}}>#{h.num}</div>
+                <div style={{fontSize:20}}>{h.emoji}</div>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                    <span style={{fontSize:13,color:h.color,fontWeight:"bold"}}>{h.planet}</span>
+                    <span style={{fontSize:11,color:h.color,direction:"rtl"}}>{h.planetAr}</span>
+                    {isCurrent&&<span style={{fontSize:9,background:h.color,color:"#07061a",borderRadius:10,padding:"1px 6px",fontWeight:"bold"}}>EN COURS</span>}
+                  </div>
+                  <div style={{fontSize:11,color:t.textMuted,fontWeight:"bold"}}>{h.start} — {h.end}</div>
+                </div>
+              </div>
+              {/* Détails sur click */}
+              {(isSelected||isCurrent)&&meaning&&(
+                <div style={{marginTop:10,paddingTop:8,borderTop:`1px solid ${h.color}33`}}>
+                  {(tradition==="both"||tradition==="islamic")&&(
+                    <div style={{marginBottom:6}}>
+                      <div style={{fontSize:9,color:h.color,fontWeight:"bold",marginBottom:3}}>🕌 Tradition islamique</div>
+                      <div style={{fontSize:10,color:t.textMuted,lineHeight:1.5,fontWeight:"bold"}}>{meaning.islamique}</div>
+                    </div>
+                  )}
+                  {(tradition==="both"||tradition==="western")&&(
+                    <div style={{marginBottom:6}}>
+                      <div style={{fontSize:9,color:h.color,fontWeight:"bold",marginBottom:3}}>⭐ Actions favorables</div>
+                      <div style={{fontSize:10,color:t.textMuted,lineHeight:1.5,fontWeight:"bold"}}>{meaning.action}</div>
+                    </div>
+                  )}
+                  <div style={{background:`${h.color}11`,borderRadius:8,padding:"6px 8px"}}>
+                    <div style={{fontSize:9,color:"#e07a5f",fontWeight:"bold",marginBottom:2}}>❌ À éviter</div>
+                    <div style={{fontSize:10,color:t.textMuted,fontWeight:"bold"}}>{meaning.eviter}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Heures nocturnes */}
+        <div style={{fontSize:11,color:t.accent,fontWeight:"bold",marginTop:14,marginBottom:8,letterSpacing:1}}>🌙 HEURES NOCTURNES (13-24)</div>
+        {data.hours.slice(12).map((h,i)=>{
+          const realIdx = i + 12;
+          const isCurrent = realIdx === currentHourIdx;
+          const meaning = PLANET_MEANINGS[h.planet];
+          const isSelected = selectedHour === realIdx;
+          return(
+            <div key={realIdx} onClick={()=>setSelectedHour(isSelected?null:realIdx)}
+              style={{background:isCurrent?`${h.color}33`:isSelected?`${h.color}18`:t.rowBg,border:`1px solid ${isCurrent?h.color:isSelected?h.color+"66":t.accent+"22"}`,borderRadius:10,padding:"10px 12px",marginBottom:6,cursor:"pointer"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{fontSize:11,color:t.textMuted,fontWeight:"bold",minWidth:20}}>#{h.num}</div>
+                <div style={{fontSize:20}}>{h.emoji}</div>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                    <span style={{fontSize:13,color:h.color,fontWeight:"bold"}}>{h.planet}</span>
+                    <span style={{fontSize:11,color:h.color,direction:"rtl"}}>{h.planetAr}</span>
+                    {isCurrent&&<span style={{fontSize:9,background:h.color,color:"#07061a",borderRadius:10,padding:"1px 6px",fontWeight:"bold"}}>EN COURS</span>}
+                  </div>
+                  <div style={{fontSize:11,color:t.textMuted,fontWeight:"bold"}}>{h.start} — {h.end}</div>
+                </div>
+              </div>
+              {(isSelected||isCurrent)&&meaning&&(
+                <div style={{marginTop:10,paddingTop:8,borderTop:`1px solid ${h.color}33`}}>
+                  {(tradition==="both"||tradition==="islamic")&&(
+                    <div style={{marginBottom:6}}>
+                      <div style={{fontSize:9,color:h.color,fontWeight:"bold",marginBottom:3}}>🕌 Tradition islamique</div>
+                      <div style={{fontSize:10,color:t.textMuted,lineHeight:1.5,fontWeight:"bold"}}>{meaning.islamique}</div>
+                    </div>
+                  )}
+                  {(tradition==="both"||tradition==="western")&&(
+                    <div style={{marginBottom:6}}>
+                      <div style={{fontSize:9,color:h.color,fontWeight:"bold",marginBottom:3}}>⭐ Actions favorables</div>
+                      <div style={{fontSize:10,color:t.textMuted,lineHeight:1.5,fontWeight:"bold"}}>{meaning.action}</div>
+                    </div>
+                  )}
+                  <div style={{background:`${h.color}11`,borderRadius:8,padding:"6px 8px"}}>
+                    <div style={{fontSize:9,color:"#e07a5f",fontWeight:"bold",marginBottom:2}}>❌ À éviter</div>
+                    <div style={{fontSize:10,color:t.textMuted,fontWeight:"bold"}}>{meaning.eviter}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Comparaison traditions */}
+      {tradition==="both"&&(
+        <div style={{background:t.cardBg,border:`1px solid ${t.accent}33`,borderRadius:14,padding:"14px",marginBottom:10}}>
+          <div style={{fontSize:11,color:t.accent,fontWeight:"bold",marginBottom:10,textAlign:"center"}}>⚖️ Comparaison des deux traditions</div>
+          <div style={{display:"flex",gap:8}}>
+            <div style={{flex:1,background:`${t.accent}11`,border:`1px solid ${t.accent}22`,borderRadius:10,padding:"10px"}}>
+              <div style={{fontSize:10,color:t.accentSoft,fontWeight:"bold",marginBottom:6}}>🕌 Islamique</div>
+              <div style={{fontSize:9,color:t.textMuted,lineHeight:1.6,fontWeight:"bold"}}>
+                Basée sur la tradition chaldéenne transmise par les savants arabes. Utilisée pour déterminer les moments favorables aux actes religieux, commerciaux et personnels. Ibn Ajiba et Al-Buni l'intégraient dans leurs travaux.
+              </div>
+            </div>
+            <div style={{flex:1,background:`${t.accent}11`,border:`1px solid ${t.accent}22`,borderRadius:10,padding:"10px"}}>
+              <div style={{fontSize:10,color:t.accentSoft,fontWeight:"bold",marginBottom:6}}>⭐ Occidentale</div>
+              <div style={{fontSize:9,color:t.textMuted,lineHeight:1.6,fontWeight:"bold"}}>
+                Même système chaldéen mais interprété selon l'astrologie grecque puis européenne. Utilisé en astrologie élective pour choisir les moments propices aux actions importantes.
+              </div>
+            </div>
+          </div>
+          <div style={{marginTop:10,fontSize:9,color:t.textMuted,fontWeight:"bold",textAlign:"center",borderTop:`1px solid ${t.accent}22`,paddingTop:8}}>
+            Les deux traditions utilisent le même ordre chaldéen des 7 planètes.<br/>La différence réside dans l'interprétation spirituelle et culturelle.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App(){
   const [selDate,setSelDate]=useState(new Date());
   const [sys,setSys]=useState("sidereal");
@@ -1147,7 +1443,7 @@ export default function App(){
   const [prevTab,setPrevTab]=useState("today");
   const [tk,setTk]=useState("night");
   const t=THEMES[tk];
-  const tabOrder=["today","natal","book","dua","wheel","calendar","dates","roles","list","settings"];
+  const tabOrder=["today","natal","book","dua","planetary","wheel","calendar","dates","roles","list","settings"];
 
   // Swipe gauche/droite
   const touchStart=useRef(null);
@@ -1196,7 +1492,7 @@ export default function App(){
   const ts=`${String(selDate.getHours()).padStart(2,"0")}:${String(selDate.getMinutes()).padStart(2,"0")}`;
   const ph=phase(selDate);
 
-  const TABS=[["today","Aujourd'hui"],["natal","🌙 Natal"],["book","📚 Livre"],["dua","🤲 Du'a"],["wheel","⭕ Roue"],["calendar","📅 Mois"],["dates","🗓️ Dates"],["roles","Rôles"],["list","Les 28"],["settings","⚙️"]];
+  const TABS=[["today","Aujourd'hui"],["natal","🌙 Natal"],["book","📚 Livre"],["dua","🤲 Du'a"],["planetary","⏰ Planètes"],["wheel","⭕ Roue"],["calendar","📅 Mois"],["dates","🗓️ Dates"],["roles","Rôles"],["list","Les 28"],["settings","⚙️"]];
 
   return(
     <div style={{minHeight:"100vh",maxWidth:430,margin:"0 auto",background:t.root,fontFamily:"'Georgia','Times New Roman',serif",color:t.textLight,position:"relative",overflow:"hidden"}} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
@@ -1209,13 +1505,18 @@ export default function App(){
         </div>
         <h1 style={{margin:"0 0 3px",fontSize:26,fontWeight:"600",color:t.accentSoft,textShadow:`0 0 40px ${t.accent}66`,letterSpacing:2}}>مَنَازِل القَمَر</h1>
         <p style={{margin:0,fontSize:12,fontWeight:"600",color:t.textMuted,letterSpacing:4,textTransform:"uppercase"}}>Stations Lunaires</p>
-        {hijriDate&&<div style={{fontSize:12,fontWeight:"bold",color:t.accent,marginTop:4}}>{hijriDate.displayAr||hijriDate.display}</div>}
+        {hijriDate&&(
+          <div style={{marginTop:4,textAlign:"center"}}>
+            <div style={{fontSize:13,fontWeight:"bold",color:t.accent,direction:"rtl"}}>{hijriDate.displayAr||hijriDate.display}</div>
+            <div style={{fontSize:11,fontWeight:"bold",color:t.textMuted}}>{hijriDate.day} {hijriDate.month} {hijriDate.year} H</div>
+          </div>
+        )}
       </header>
 
       <div style={{display:"flex",gap:5,padding:"8px 12px",background:t.tabsBg,borderBottom:`1px solid ${t.tabBorder}`,alignItems:"center"}}>
       {/* BANNIÈRE PUB COMPACTE */}
-      <div onClick={()=>window.open("https://wa.me/221764265550","_blank")}
-        style={{display:"flex",alignItems:"center",gap:10,padding:"6px 12px",background:"linear-gradient(90deg,#1a0a00 0%,#2d1500 50%,#1a0a00 100%)",borderBottom:"1px solid #C9A84C66",cursor:"pointer"}}>
+      <div style={{padding:"6px 12px",background:"linear-gradient(90deg,#1a0a00 0%,#2d1500 50%,#1a0a00 100%)",borderBottom:"1px solid #C9A84C66"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:6}}>
         <span style={{fontSize:16}}>📚</span>
         <div style={{flex:1,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
           <span style={{fontSize:12,color:"#e8c97a",fontWeight:"bold"}}>Manâzil Al-Qamar</span>
@@ -1226,7 +1527,11 @@ export default function App(){
           <span style={{fontSize:12,color:"#e8c97a",fontWeight:"bold"}}>6.900F</span>
           <span style={{fontSize:10,background:"#25D366",color:"white",borderRadius:8,padding:"4px 8px",fontWeight:"bold"}}>📲</span>
         </div>
-      </div>
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          <button onClick={()=>window.open("https://iqbmnusp.mychariow.shop/","_blank")} style={{flex:1,background:"#C9A84C",border:"none",borderRadius:6,padding:"5px",color:"#1a0a00",fontSize:10,fontWeight:"bold",cursor:"pointer",fontFamily:"inherit"}}>🛒 Chariow</button>
+          <button onClick={()=>window.open("https://wa.me/221764265550","_blank")} style={{flex:1,background:"#25D366",border:"none",borderRadius:6,padding:"5px",color:"white",fontSize:10,fontWeight:"bold",cursor:"pointer",fontFamily:"inherit"}}>📲 WhatsApp</button>
+        </div>
       </div>
 
       <div style={{display:"flex",gap:6,padding:"8px 12px",background:`${t.tabsBg}99`,borderBottom:`1px solid ${t.tabBorder}`}}>
@@ -1263,6 +1568,7 @@ export default function App(){
         {tab==="wheel"&&<WheelView md={md} ph={ph} t={t}/>}
         {tab==="calendar"&&<MonthCal selDate={selDate} setSelDate={setSelDate} sys={sys} setTab={setTab} t={t}/>}
         {tab==="dates"&&<FavorableDates sys={sys} t={t}/>}
+        {tab==="planetary"&&<PlanetaryHoursView t={t} date={selDate}/>}
         {tab==="roles"&&<RolesView md={md} t={t}/>}
         {tab==="list"&&<ListView idx={md?.manzilIdx} t={t}/>}
         {tab==="settings"&&<SettingsView t={t}/>}
@@ -1360,6 +1666,21 @@ function TodayView({md,loading,ph,sys,selDate,ds,ts,t,hijriDate,onDC,onTC}){
           </div>
 
           <LunarCountdown date={selDate} t={t}/>
+
+          {/* Lever / Coucher Lune */}
+          {md?.moonRise&&(
+            <div style={{display:"flex",gap:8,marginBottom:10}}>
+              {[["🌅","Lever",md.moonRise.lever,"#4ecf8a"],["🔆","Zénith",md.moonRise.zenith,t.accent],["🌇","Coucher",md.moonRise.coucher,"#e07a5f"]].map(([icon,label,time,color])=>(
+                <div key={label} style={{flex:1,background:t.rowBg,border:`1px solid ${color}44`,borderRadius:12,padding:"10px 6px",textAlign:"center"}}>
+                  <div style={{fontSize:18,marginBottom:3}}>{icon}</div>
+                  <div style={{fontSize:10,color:t.textMuted,fontWeight:"bold",marginBottom:4}}>{label}</div>
+                  <div style={{fontSize:17,color,fontWeight:"bold"}}>{time}</div>
+                  <div style={{fontSize:9,color:t.textMuted,fontWeight:"bold"}}>Lune</div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <MoonSunPos md={md} sys={sys} t={t}/>
 
           <div style={{background:t.cardBg,border:`1px solid ${t.cardBorder}`,borderRadius:14,padding:"12px",marginBottom:10}}>
@@ -1540,7 +1861,11 @@ function FullBookAd({t}){
       <a href="https://wa.me/221764265550" target="_blank" rel="noopener noreferrer"
         style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"#25D366",borderRadius:10,padding:"11px",textDecoration:"none",color:"white",fontSize:13,fontWeight:"bold"}}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        Commander · +221 76 426 55 50
+        🛒 Boutique Chariow
+      </a>
+      <a href="https://wa.me/221764265550" target="_blank" rel="noopener noreferrer"
+        style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"#25D366",borderRadius:10,padding:"10px",textDecoration:"none",color:"white",fontSize:12,fontWeight:"bold",marginTop:8}}>
+        📲 Commander sur WhatsApp · +221 76 426 55 50
       </a>
     </div>
   );
