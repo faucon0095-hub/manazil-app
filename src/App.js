@@ -1495,7 +1495,7 @@ export default function App(){
   const TABS=[["today","Aujourd'hui"],["natal","🌙 Natal"],["book","📚 Livre"],["dua","🤲 Du'a"],["planetary","⏰ Planètes"],["wheel","⭕ Roue"],["calendar","📅 Mois"],["dates","🗓️ Dates"],["roles","Rôles"],["list","Les 28"],["settings","⚙️"]];
 
   return(
-    <div style={{minHeight:"100vh",maxWidth:430,margin:"0 auto",background:t.root,fontFamily:"'Georgia','Times New Roman',serif",color:t.textLight,position:"relative",overflow:"hidden"}} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+    <div style={{minHeight:"100vh",maxWidth:430,margin:"0 auto",background:t.root,fontFamily:"Georgia,serif",color:t.textLight,position:"relative",overflow:"hidden"}} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       {t.starsBg&&<StarField/>}
 
       <header style={{textAlign:"center",padding:"20px 20px 10px",background:t.header,borderBottom:`1px solid ${t.headerBorder}`,position:"sticky",top:0,zIndex:50,backdropFilter:"blur(12px)"}}>
