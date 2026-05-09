@@ -1427,23 +1427,11 @@ function DhikrView(props) {
   var nc = NC[manzil.nature] || t.accent;
   function copyDhikr(){
     if(navigator.clipboard){
-      navigator.clipboard.writeText(dhikr.dhikr+"
-"+dhikr.fr+"
-"+dhikr.count).then(function(){alert("Dhikr copie !");});
+      navigator.clipboard.writeText(dhikr.dhikr+"\n"+dhikr.fr+"\n"+dhikr.count).then(function(){alert("Dhikr copié !");});
     }
   }
   function share(){
-    var text = "Dhikr du Manzil #"+(sel+1)+" - "+manzil.fr+"
-
-"+dhikr.dhikr+"
-
-"+dhikr.fr+"
-
-Repeter: "+dhikr.count+"
-
-"+dhikr.conseil+"
-
-manazil-senastro.com";
+    var text = "Dhikr du Manzil #"+(sel+1)+" - "+manzil.fr+"\n\n"+dhikr.dhikr+"\n\n"+dhikr.fr+"\n\nRépéter: "+dhikr.count+"\n\n"+dhikr.conseil+"\n\nmanazil-senastro.com";
     window.open("https://wa.me/?text="+encodeURIComponent(text),"_blank");
   }
   return (
