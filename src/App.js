@@ -398,6 +398,256 @@ const ECLIPSES = [
   {date:"2028-01-12",type:"Totale",nom:"Eclipse totale Janvier 2028",heure:"04:13",visible:"Afrique, Europe, Asie",magnitude:"1.238",duree:"~3h31min",manzil:3,conseil:"Eclipse sous les Pleiades, manzil tres beni. Periode de grande prosperite spirituelle."}
 ];
 
+
+// ─── Heures Planétaires ───────────────────────────────────────────────────
+const PLANETES = [
+  {nom:"Soleil",ar:"الشمس",emoji:"☀️",color:"#e0a820",description:"Heure de puissance, autorite, succes et vitalite. Ideal pour rencontrer des dirigeants, signer des contrats importants et toute action necessitant force et prestige.",favorables:["Demandes aux autorites","Signer contrats importants","Soins de sante","Commerce de luxe"],defavorables:["Actions secretes","Humilite","Dissimulation"]},
+  {nom:"Lune",ar:"القمر",emoji:"🌙",color:"#8a9fc4",description:"Heure de sensibilite, intuition et voyages. Propice aux voyages, aux affaires domestiques et aux relations emotionnelles. La Lune gouverne les liquides et les cycles.",favorables:["Voyages","Affaires domestiques","Relations emotionnelles","Agriculture","Peche"],defavorables:["Decisions rationnelles majeures","Confrontations"]},
+  {nom:"Mars",ar:"المريخ",emoji:"🔴",color:"#e74c3c",description:"Heure d energie brute, de combat et de force physique. Bon pour les actions necessitant courage et determination. Eviter les negociations et les partenariats.",favorables:["Actions physiques","Defense","Courage","Chirurgie","Sport"],defavorables:["Mariage","Partenariats","Negociations","Commerce"]},
+  {nom:"Mercure",ar:"عطارد",emoji:"☿",color:"#27ae60",description:"Heure d intelligence, de communication et de commerce. Excellent pour les etudes, les ecrits, les negociations et tout ce qui necessite esprit vif et eloquence.",favorables:["Etudes et apprentissage","Ecriture","Commerce","Negociations","Communications"],defavorables:["Actions physiques","Travaux manuels lourds"]},
+  {nom:"Jupiter",ar:"المشتري",emoji:"⚡",color:"#9b59b6",description:"Heure de sagesse, benediction et expansion. La plus benie des heures planetaires. Excellent pour le mariage, les affaires religieuses, la charite et tout ce qui necessite benediction divine.",favorables:["Mariage","Priere et devotion","Charite","Expansion des affaires","Enseignement","Guerison"],defavorables:["Conflits","Guerres","Ruptures"]},
+  {nom:"Venus",ar:"الزهرة",emoji:"💫",color:"#e91e8c",description:"Heure d amour, beaute et harmonie. Propice aux unions amoureuses, aux arts, a la musique et aux plaisirs de la vie. Venus apporte douceur et seduction.",favorables:["Mariage et amour","Arts et musique","Beaute et mode","Reconciliations","Fetes"],defavorables:["Conflits","Affaires militaires","Actions dures"]},
+  {nom:"Saturne",ar:"زحل",emoji:"🪐",color:"#7f8c8d",description:"Heure de discipline, limitation et travail profond. Bon pour les constructions durables, les travaux souterrains et les affaires necessitant perseverance. Eviter les nouveaux commencements.",favorables:["Construction solide","Travaux de longue duree","Discipline","Magie defensive"],defavorables:["Nouveaux projets","Voyages","Mariage","Commerce rapide"]},
+];
+
+// Ordre des planetes selon le systeme chaldeen
+const ORDRE_CHALDEEN = [
+  "Saturne","Jupiter","Mars","Soleil","Venus","Mercure","Lune"
+];
+
+// Planete qui gouverne le jour
+const PLANETE_DU_JOUR = [
+  "Soleil",   // Dimanche
+  "Lune",     // Lundi
+  "Mars",     // Mardi
+  "Mercure",  // Mercredi
+  "Jupiter",  // Jeudi
+  "Venus",    // Vendredi
+  "Saturne",  // Samedi
+];
+
+function calcHeuresPlanetaires(date) {
+  // Lever et coucher du soleil approximatif pour Dakar
+  var lat = 14.6937;
+  var j = Math.floor(date.getTime() / 864e5);
+  var sunrise = 6.0 + (Math.sin((j / 365.25) * 2 * Math.PI) * 0.5);
+  var sunset = 19.5 + (Math.sin((j / 365.25) * 2 * Math.PI) * 0.3);
+  
+  var dayDuration = sunset - sunrise;
+  var nightDuration = 24 - dayDuration;
+  var dayHour = dayDuration / 12;
+  var nightHour = nightDuration / 12;
+  
+  var dow = date.getDay(); // 0=Dim, 1=Lun...
+  var planeteDuJour = PLANETE_DU_JOUR[dow];
+  var startIdx = ORDRE_CHALDEEN.indexOf(planeteDuJour);
+  
+  var hours = [];
+  
+  // 12 heures du jour
+  for(var i = 0; i < 12; i++) {
+    var startH = sunrise + i * dayHour;
+    var endH = sunrise + (i+1) * dayHour;
+    var planetIdx = (startIdx + i) % 7;
+    var planete = PLANETES.find(function(p){return p.nom === ORDRE_CHALDEEN[planetIdx];});
+    hours.push({
+      numero: i+1,
+      type: "jour",
+      debut: startH,
+      fin: endH,
+      planete: planete,
+      debutStr: formatHeure(startH),
+      finStr: formatHeure(endH)
+    });
+  }
+  
+  // 12 heures de la nuit
+  for(var i = 0; i < 12; i++) {
+    var startH = sunset + i * nightHour;
+    var endH = sunset + (i+1) * nightHour;
+    var planetIdx = (startIdx + 12 + i) % 7;
+    var planete = PLANETES.find(function(p){return p.nom === ORDRE_CHALDEEN[planetIdx];});
+    hours.push({
+      numero: i+1,
+      type: "nuit",
+      debut: startH % 24,
+      fin: endH % 24,
+      planete: planete,
+      debutStr: formatHeure(startH % 24),
+      finStr: formatHeure(endH % 24)
+    });
+  }
+  
+  return {hours: hours, planeteDuJour: planeteDuJour, sunrise: sunrise, sunset: sunset};
+}
+
+function formatHeure(h) {
+  var hh = Math.floor(((h % 24) + 24) % 24);
+  var mm = Math.floor((h % 1) * 60);
+  return String(hh).padStart(2,"0") + ":" + String(mm).padStart(2,"0");
+}
+
+function getCurrentPlanetaryHour(hours, date) {
+  var now = date.getHours() + date.getMinutes()/60;
+  for(var i = 0; i < hours.length; i++) {
+    var h = hours[i];
+    var debut = h.debut;
+    var fin = h.fin;
+    // Gérer le passage minuit
+    if(debut <= fin) {
+      if(now >= debut && now < fin) return i;
+    } else {
+      if(now >= debut || now < fin) return i;
+    }
+  }
+  return 0;
+}
+
+
+// ─── Traductions ──────────────────────────────────────────────────────────
+const LANGS = {
+  fr: {
+    dir: "ltr",
+    tabs: {
+      today:"Aujourd hui", planetary:"Planetes", rolesManzil:"Roles",
+      boutique:"Boutique", natal:"Natal", dua:"Dua", dhikr:"Dhikr",
+      wheel:"Roue", calendar:"Mois", dates:"Dates", list:"Les 28",
+      tafsir:"Tafsir", nuits:"Nuits", eclipses:"Eclipses", settings:"Reglages"
+    },
+    tabIcons: {
+      today:"🌙", planetary:"🪐", rolesManzil:"📜", boutique:"🛍️",
+      natal:"⭐", dua:"🤲", dhikr:"📿", wheel:"⭕", calendar:"📅",
+      dates:"🗓️", list:"📋", tafsir:"📖", nuits:"✨", eclipses:"🌑", settings:"⚙️"
+    },
+    ui: {
+      manzilDuJour:"MANZIL DU JOUR",
+      entree:"Entree", sortie:"Sortie", parcouru:"parcouru",
+      sideral:"Sideral", tropical:"Tropical",
+      arabIslamique:"Arabo-islamique", occidental:"Occidental",
+      theme:"THEME", nuit:"Nuit", blanc:"Blanc", nature:"Nature", sepia:"Sepia",
+      date:"Date", heure:"Heure",
+      nouvellelune:"Nouvelle Lune", pleinelune:"Pleine Lune",
+      positionsCelestes:"POSITIONS CELESTES", lune:"LUNE", soleil:"SOLEIL",
+      afaire:"A faire", aeviter:"A eviter",
+      duaJour:"Dua du jour",
+      radioTitle:"SEN-ASTRO RADIO",
+      radioSub:"Astrologie - Spiritualite - Manazil",
+      enDirect:"EN DIRECT",
+      ecouter:"Ecouter",
+      fermer:"Fermer",
+      emissions:"emissions",
+      boutique:"Boutique",
+      nature_tb:"Tres benefique", nature_b:"Benefique",
+      nature_n:"Neutre", nature_m:"Malefique",
+      searchPlaceholder:"Chercher un manzil...",
+      calculer:"Calculer mon Manzil natal",
+      dateNaissance:"Date de naissance",
+      tonManzilNatal:"TON MANZIL NATAL",
+      heureEnCours:"HEURE EN COURS",
+      jourGouvernePar:"JOUR GOUVERNE PAR",
+      lever:"Lever", coucher:"Coucher", zenith:"Zenith",
+      approx:"* Heures approximatives",
+    }
+  },
+  ar: {
+    dir: "rtl",
+    tabs: {
+      today:"اليوم", planetary:"الكواكب", rolesManzil:"الأدوار",
+      boutique:"المتجر", natal:"الميلاد", dua:"الدعاء", dhikr:"الذكر",
+      wheel:"العجلة", calendar:"الشهر", dates:"التواريخ", list:"الـ 28",
+      tafsir:"التفسير", nuits:"الليالي", eclipses:"الكسوف", settings:"الإعدادات"
+    },
+    tabIcons: {
+      today:"🌙", planetary:"🪐", rolesManzil:"📜", boutique:"🛍️",
+      natal:"⭐", dua:"🤲", dhikr:"📿", wheel:"⭕", calendar:"📅",
+      dates:"🗓️", list:"📋", tafsir:"📖", nuits:"✨", eclipses:"🌑", settings:"⚙️"
+    },
+    ui: {
+      manzilDuJour:"مَنْزِل اليوم",
+      entree:"الدخول", sortie:"الخروج", parcouru:"مكتمل",
+      sideral:"النجومي", tropical:"الاستوائي",
+      arabIslamique:"التقليد العربي الإسلامي", occidental:"الزودياك الغربي",
+      theme:"السمة", nuit:"ليل", blanc:"أبيض", nature:"طبيعة", sepia:"سيبيا",
+      date:"التاريخ", heure:"الوقت",
+      nouvellelune:"الهلال الجديد", pleinelune:"البدر",
+      positionsCelestes:"المواضع السماوية", lune:"القمر", soleil:"الشمس",
+      afaire:"يُستحسن", aeviter:"يُكره",
+      duaJour:"دعاء اليوم",
+      radioTitle:"سن-أسترو راديو",
+      radioSub:"التنجيم - الروحانيات - المنازل",
+      enDirect:"مباشر",
+      ecouter:"استمع",
+      fermer:"إغلاق",
+      emissions:"حلقات",
+      boutique:"المتجر",
+      nature_tb:"مبارك جداً", nature_b:"مبارك",
+      nature_n:"محايد", nature_m:"عسير",
+      searchPlaceholder:"ابحث عن منزل...",
+      calculer:"احسب منزلي الميلادي",
+      dateNaissance:"تاريخ الميلاد",
+      tonManzilNatal:"مَنْزِلُكَ عند الميلاد",
+      heureEnCours:"الساعة الحالية",
+      jourGouvernePar:"يوم يحكمه",
+      lever:"الشروق", coucher:"الغروب", zenith:"السمت",
+      approx:"* أوقات تقريبية",
+    }
+  },
+  en: {
+    dir: "ltr",
+    tabs: {
+      today:"Today", planetary:"Planets", rolesManzil:"Roles",
+      boutique:"Shop", natal:"Birth", dua:"Dua", dhikr:"Dhikr",
+      wheel:"Wheel", calendar:"Month", dates:"Dates", list:"The 28",
+      tafsir:"Tafsir", nuits:"Holy Nights", eclipses:"Eclipses", settings:"Settings"
+    },
+    tabIcons: {
+      today:"🌙", planetary:"🪐", rolesManzil:"📜", boutique:"🛍️",
+      natal:"⭐", dua:"🤲", dhikr:"📿", wheel:"⭕", calendar:"📅",
+      dates:"🗓️", list:"📋", tafsir:"📖", nuits:"✨", eclipses:"🌑", settings:"⚙️"
+    },
+    ui: {
+      manzilDuJour:"TODAY MANZIL",
+      entree:"Entry", sortie:"Exit", parcouru:"completed",
+      sideral:"Sidereal", tropical:"Tropical",
+      arabIslamique:"Arab-Islamic tradition", occidental:"Western zodiac",
+      theme:"THEME", nuit:"Night", blanc:"White", nature:"Nature", sepia:"Sepia",
+      date:"Date", heure:"Time",
+      nouvellelune:"New Moon", pleinelune:"Full Moon",
+      positionsCelestes:"CELESTIAL POSITIONS", lune:"MOON", soleil:"SUN",
+      afaire:"Favorable", aeviter:"Avoid",
+      duaJour:"Today Dua",
+      radioTitle:"SEN-ASTRO RADIO",
+      radioSub:"Astrology - Spirituality - Manazil",
+      enDirect:"LIVE",
+      ecouter:"Listen",
+      fermer:"Close",
+      emissions:"episodes",
+      boutique:"Shop",
+      nature_tb:"Very beneficial", nature_b:"Beneficial",
+      nature_n:"Neutral", nature_m:"Difficult",
+      searchPlaceholder:"Search a manzil...",
+      calculer:"Calculate my birth Manzil",
+      dateNaissance:"Date of birth",
+      tonManzilNatal:"YOUR BIRTH MANZIL",
+      heureEnCours:"CURRENT HOUR",
+      jourGouvernePar:"DAY GOVERNED BY",
+      lever:"Sunrise", coucher:"Sunset", zenith:"Zenith",
+      approx:"* Approximate times",
+    }
+  }
+};
+
+
+// Helper traduction nature
+function getNatureLabel(nature, L) {
+  var map = {
+    "Tres benefique": L.ui.nature_tb,
+    "Benefique": L.ui.nature_b,
+    "Neutre": L.ui.nature_n,
+    "Malefique": L.ui.nature_m,
+  };
+  return map[nature] || nature;
+}
 // ─── CSS Animations ───────────────────────────────────────────────────────
 const ANIM_CSS = `
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.1}}
@@ -600,6 +850,7 @@ function RolesCard(props) {
 
 // ─── MoonSunPos ───────────────────────────────────────────────────────────
 function MoonSunPos(props) {
+  var L=props.L||LANGS.fr;
   var md=props.md, sys=props.sys, t=props.t;
   var sg=sys==="sidereal"?md.signeSid:md.signeTrop;
   return (
@@ -621,7 +872,7 @@ function MoonSunPos(props) {
             <div style={{fontSize:15,fontWeight:"bold",color:"#e8c97a",marginBottom:2}}>{md.sunSigne.signe.fr}</div>
             <div style={{fontSize:11,color:t.textMuted,direction:"rtl",marginBottom:5,fontWeight:"600"}}>{md.sunSigne.signe.ar}</div>
             <div style={{fontSize:17,color:"#C9A84C",fontWeight:"bold"}}>{md.sunSigne.deg}° {md.sunSigne.min}'</div>
-            <div style={{fontSize:10,color:t.textMuted,marginTop:2,fontWeight:"bold"}}>{sys==="sidereal"?"Sideral":"Tropical"}</div>
+            <div style={{fontSize:10,color:t.textMuted,marginTop:2,fontWeight:"bold"}}>{sys==="sidereal"?L.ui.sideral:L.ui.tropical}</div>
           </div>
         )}
       </div>
@@ -639,13 +890,14 @@ function MoonSunPos(props) {
 
 // ─── Lunar Countdown ──────────────────────────────────────────────────────
 function LunarCountdown(props) {
+  var L=props.L||LANGS.fr;
   var date=props.date, t=props.t;
   var events=nextLunarEvent(date);
   function fmtDate(d){return d.toLocaleDateString("fr-FR",{weekday:"short",day:"2-digit",month:"short"});}
   return (
     <div style={{display:"flex",gap:8,marginBottom:10}}>
-      {[{emoji:"🌑",name:"Nouvelle Lune",data:events.newMoon,color:"#8a9fc4"},
-        {emoji:"🌕",name:"Pleine Lune",data:events.fullMoon,color:"#e8c97a"}
+      {[{emoji:"🌑",name:L.ui.nouvellelune,data:events.newMoon,color:"#8a9fc4"},
+        {emoji:"🌕",name:L.ui.pleinelune,data:events.fullMoon,color:"#e8c97a"}
       ].map(function(item){return(
         <div key={item.name} style={{flex:1,background:t.rowBg,border:"1px solid "+item.color+"33",borderRadius:12,padding:"12px",textAlign:"center"}}>
           <div style={{fontSize:22,marginBottom:3}}>{item.emoji}</div>
@@ -981,6 +1233,7 @@ function RolesView(props) {
 // ─── ListView ─────────────────────────────────────────────────────────────
 function ListView(props) {
   var idx=props.idx, t=props.t;
+  var L=props.L||LANGS.fr;
   var sr=useState(""); var search=sr[0]; var setSearch=sr[1];
   var filtered=MANAZIL.filter(function(m,i){
     if(!search)return true;
@@ -991,7 +1244,7 @@ function ListView(props) {
       <h3 style={{color:t.accent,fontSize:14,letterSpacing:2,marginBottom:10,fontWeight:"bold"}}>Les 28 Manazil al-Qamar</h3>
       <div style={{background:t.rowBg,border:"1px solid "+t.accent+"33",borderRadius:10,padding:"8px 12px",marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
         <span style={{fontSize:14}}>🔍</span>
-        <input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Chercher un manzil..."
+        <input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder={L.ui.searchPlaceholder||"Chercher..."}
           style={{flex:1,background:"none",border:"none",color:t.textLight,fontSize:13,fontFamily:"inherit",outline:"none",fontWeight:"bold"}}/>
         {search&&<button onClick={function(){setSearch("");}} style={{background:"none",border:"none",color:t.textMuted,cursor:"pointer",fontSize:16,fontWeight:"bold"}}>x</button>}
       </div>
@@ -1101,8 +1354,24 @@ function TodayView(props) {
   var md=props.md, loading=props.loading, ph=props.ph, sys=props.sys;
   var selDate=props.selDate, ds=props.ds, ts=props.ts, t=props.t;
   var hijriDate=props.hijriDate, onDC=props.onDC, onTC=props.onTC;
+  var L=props.L||LANGS.fr;
+  var L=props.L||LANGS.fr; var lang=props.lang||"fr";
+  var L=props.L||LANGS.fr;
   return (
     <div>
+      {/* Bouton radio demarrage */}
+      <div style={{background:"linear-gradient(135deg,#1B146422,#07061a22)",border:"1px solid #C9A84C44",borderRadius:14,padding:"12px 16px",marginBottom:12,display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}
+        onClick={function(){var r=document.getElementById("radio-start-btn");if(r)r.click();}}>
+        <div style={{fontSize:28}}>📻</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:12,color:"#C9A84C",fontWeight:"bold",marginBottom:2}}>{L.ui.radioTitle}</div>
+          <div style={{fontSize:10,color:t.textMuted,fontWeight:"600"}}>{L.ui.radioSub}</div>
+        </div>
+        <div style={{background:"linear-gradient(135deg,#e0a820,#B8860B)",borderRadius:20,padding:"6px 14px",color:"#07061a",fontSize:11,fontWeight:"bold"}}>
+          {L.ui.ecouter}
+        </div>
+      </div>
+
       {md&&!loading&&(
         <div style={{background:"linear-gradient(135deg,"+t.accent+"22,"+t.accent+"08)",border:"2px solid "+t.accent+"88",borderRadius:16,padding:"16px",marginBottom:12,textAlign:"center"}}>
           <div style={{fontSize:11,color:t.textMuted,letterSpacing:3,marginBottom:6,fontWeight:"bold"}}>MANZIL DU JOUR</div>
@@ -1152,10 +1421,10 @@ function TodayView(props) {
               {hijriDate&&<div style={{fontSize:11,color:t.accent,marginBottom:2,fontWeight:"bold"}}>{hijriDate.displayAr||hijriDate.display}</div>}
               <div style={{fontSize:10,color:t.textMuted,fontWeight:"bold"}}>Age: {ph.age}j - {ph.pct}% illumine</div>
             </div>
-            <div style={{fontSize:9,color:t.deepBlue,background:t.accent,borderRadius:20,padding:"2px 6px",fontWeight:"bold"}}>{sys==="sidereal"?"Sideral":"Tropical"}</div>
+            <div style={{fontSize:9,color:t.deepBlue,background:t.accent,borderRadius:20,padding:"2px 6px",fontWeight:"bold"}}>{sys==="sidereal"?L.ui.sideral:L.ui.tropical}</div>
           </div>
-          <LunarCountdown date={selDate} t={t}/>
-          <MoonSunPos md={md} sys={sys} t={t}/>
+          <LunarCountdown date={selDate} t={t} L={L}/>
+          <MoonSunPos md={md} sys={sys} t={t} L={L}/>
           <div style={{background:t.cardBg,border:"1px solid "+t.cardBorder,borderRadius:14,padding:"12px",marginBottom:10}}>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:t.textMuted,marginBottom:6,fontWeight:"bold"}}>
               <span>Entree</span><span style={{color:t.accent}}>{md.progress}% parcouru</span><span>Sortie</span>
@@ -1172,7 +1441,7 @@ function TodayView(props) {
             <div style={{fontSize:10,color:t.textMuted,fontStyle:"italic",fontWeight:"600"}}>{DUAS[md.manzilIdx]?DUAS[md.manzilIdx].fr:""}</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-            {[["Entree",md.entryTime],["Sortie",md.exitTime]].map(function(item,i){return(
+            {[[L.ui.entree,md.entryTime],[L.ui.sortie,md.exitTime]].map(function(item,i){return(
               <div key={i} style={{flex:1,background:t.rowBg,border:"1px solid "+t.accent+"33",borderRadius:12,padding:"10px 8px",textAlign:"center"}}>
                 <div style={{fontSize:11,color:t.textMuted,marginBottom:4,fontWeight:"bold"}}>{item[0]}</div>
                 <div style={{fontSize:20,color:t.accentSoft,marginBottom:2,fontWeight:"bold"}}>{fmtT(item[1])}</div>
@@ -1197,6 +1466,7 @@ function TodayView(props) {
 
 // ─── WheelView ────────────────────────────────────────────────────────────
 function WheelView(props) {
+  var L=props.L||LANGS.fr;
   var md=props.md, ph=props.ph, t=props.t;
   return (
     <div>
@@ -1210,7 +1480,7 @@ function WheelView(props) {
         <div style={{background:t.cardBg,border:"1px solid "+t.accent+"33",borderRadius:14,padding:"14px",marginTop:10}}>
           <div style={{fontSize:11,color:t.textMuted,letterSpacing:2,marginBottom:10,textAlign:"center",fontWeight:"bold"}}>LEVER ET COUCHER DE LA LUNE</div>
           <div style={{display:"flex",justifyContent:"space-between"}}>
-            {[["Lever",md.moonRise.lever,"#4ecf8a"],["Zenith",md.moonRise.zenith,t.accent],["Coucher",md.moonRise.coucher,"#e07a5f"]].map(function(item){return(
+            {[[L.ui.lever,md.moonRise.lever,"#4ecf8a"],[L.ui.zenith,md.moonRise.zenith,t.accent],[L.ui.coucher,md.moonRise.coucher,"#e07a5f"]].map(function(item){return(
               <div key={item[0]} style={{textAlign:"center",flex:1}}>
                 <div style={{fontSize:10,color:t.textMuted,marginBottom:4,fontWeight:"bold"}}>{item[0]}</div>
                 <div style={{fontSize:16,color:t.accentSoft,fontWeight:"bold"}}>{item[1]}</div>
@@ -1427,11 +1697,11 @@ function DhikrView(props) {
   var nc = NC[manzil.nature] || t.accent;
   function copyDhikr(){
     if(navigator.clipboard){
-      navigator.clipboard.writeText(dhikr.dhikr+"\n"+dhikr.fr+"\n"+dhikr.count).then(function(){alert("Dhikr copié !");});
+      navigator.clipboard.writeText(dhikr.dhikr+"\n\n"+dhikr.fr+"\n\n"+dhikr.count).then(function(){alert("Dhikr copie !");});
     }
   }
   function share(){
-    var text = "Dhikr du Manzil #"+(sel+1)+" - "+manzil.fr+"\n\n"+dhikr.dhikr+"\n\n"+dhikr.fr+"\n\nRépéter: "+dhikr.count+"\n\n"+dhikr.conseil+"\n\nmanazil-senastro.com";
+    var text = "Dhikr du Manzil #"+(sel+1)+" - "+manzil.fr+"\n\n"+dhikr.dhikr+"\n\n"+dhikr.fr+"\n\nRepeter: "+dhikr.count+"\n\n"+dhikr.conseil+"\n\nmanazil-senastro.com";
     window.open("https://wa.me/?text="+encodeURIComponent(text),"_blank");
   }
   return (
@@ -1549,6 +1819,256 @@ function EclipsesView(props) {
 }
 
 
+
+// ─── HeuresPlanetairesView ────────────────────────────────────────────────
+function HeuresPlanetairesView(props) {
+  var t = props.t;
+  var date = props.date || new Date();
+  var data = calcHeuresPlanetaires(date);
+  var currentIdx = getCurrentPlanetaryHour(data.hours, date);
+  var sel = useState(null);
+  var selIdx = sel[0]; var setSel = sel[1];
+  var filter = useState("all");
+  var filterVal = filter[0]; var setFilter = filter[1];
+
+  var jours = ["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
+  var planeteDuJour = PLANETES.find(function(p){return p.nom === data.planeteDuJour;});
+
+  var filtered = data.hours.filter(function(h){
+    if(filterVal === "all") return true;
+    return h.type === filterVal;
+  });
+
+  return (
+    <div>
+      <h3 style={{color:t.accent,fontSize:14,letterSpacing:2,marginBottom:8,fontWeight:"bold"}}>
+        Heures Planetaires
+      </h3>
+      <p style={{fontSize:11,color:t.textMuted,marginBottom:14,lineHeight:1.6,fontWeight:"600"}}>
+        Chaque heure du jour est gouvernee par une planete selon la tradition chaldéenne. 
+        Utilisees depuis l Antiquite pour choisir le moment propice a chaque action.
+      </p>
+
+      {/* Planete du jour */}
+      {planeteDuJour&&(
+        <div style={{background:"linear-gradient(135deg,"+planeteDuJour.color+"22,"+planeteDuJour.color+"08)",border:"2px solid "+planeteDuJour.color+"66",borderRadius:16,padding:"16px",marginBottom:14,textAlign:"center"}}>
+          <div style={{fontSize:10,color:t.textMuted,letterSpacing:3,marginBottom:6,fontWeight:"bold"}}>JOUR GOUVERNE PAR</div>
+          <div style={{fontSize:36,marginBottom:4}}>{planeteDuJour.emoji}</div>
+          <div style={{fontSize:20,color:planeteDuJour.color,fontWeight:"bold",marginBottom:2}}>{planeteDuJour.nom}</div>
+          <div style={{fontSize:14,color:t.textMuted,direction:"rtl",marginBottom:8,fontWeight:"bold"}}>{planeteDuJour.ar}</div>
+          <div style={{fontSize:11,color:t.textMuted,fontWeight:"600",lineHeight:1.6}}>{planeteDuJour.description}</div>
+          <div style={{fontSize:10,color:t.textMuted,marginTop:8,fontWeight:"bold"}}>{jours[date.getDay()]} — Lever: {data.sunrise.toFixed?formatHeure(data.sunrise):"06:00"} · Coucher: {formatHeure(data.sunset)}</div>
+        </div>
+      )}
+
+      {/* Heure actuelle */}
+      {data.hours[currentIdx]&&(
+        <div style={{background:t.cardBg,border:"2px solid "+data.hours[currentIdx].planete.color+"88",borderRadius:14,padding:"14px",marginBottom:14}}>
+          <div style={{fontSize:10,color:t.textMuted,letterSpacing:2,marginBottom:8,fontWeight:"bold"}}>HEURE EN COURS</div>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{fontSize:32}}>{data.hours[currentIdx].planete.emoji}</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:18,color:data.hours[currentIdx].planete.color,fontWeight:"bold",marginBottom:2}}>
+                {data.hours[currentIdx].planete.nom}
+                <span style={{fontSize:12,color:t.textMuted,marginLeft:8,fontWeight:"600"}}>
+                  Heure #{data.hours[currentIdx].numero} du {data.hours[currentIdx].type}
+                </span>
+              </div>
+              <div style={{fontSize:12,color:t.accentSoft,fontWeight:"bold",marginBottom:4}}>
+                {data.hours[currentIdx].debutStr} — {data.hours[currentIdx].finStr}
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                {data.hours[currentIdx].planete.favorables.slice(0,2).map(function(f,i){return(
+                  <span key={i} style={{fontSize:9,background:data.hours[currentIdx].planete.color+"22",color:data.hours[currentIdx].planete.color,border:"1px solid "+data.hours[currentIdx].planete.color+"44",borderRadius:20,padding:"2px 8px",fontWeight:"bold"}}>{f}</span>
+                );})}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filtres */}
+      <div style={{display:"flex",gap:8,marginBottom:12}}>
+        {[["all","Tout"],["jour","Jour"],["nuit","Nuit"]].map(function(item){return(
+          <button key={item[0]} onClick={function(){setFilter(item[0]);}}
+            style={{flex:1,padding:"8px",background:filterVal===item[0]?(t.accent+"33"):"none",border:filterVal===item[0]?("1px solid "+t.accent+"99"):("1px solid "+t.accent+"22"),borderRadius:10,color:filterVal===item[0]?t.accentSoft:t.textMuted,fontSize:12,cursor:"pointer",fontFamily:"inherit",fontWeight:"bold"}}>
+            {item[1]}
+          </button>
+        );})}
+      </div>
+
+      {/* Liste des heures */}
+      {filtered.map(function(h,i){
+        var isCurrentHour = data.hours.indexOf(h) === currentIdx;
+        var isSelected = selIdx === data.hours.indexOf(h);
+        return(
+          <div key={i} onClick={function(){setSel(isSelected?null:data.hours.indexOf(h));}}
+            style={{background:isCurrentHour?(h.planete.color+"22"):(isSelected?t.rowBg:t.rowBg),border:isCurrentHour?("2px solid "+h.planete.color+"88"):("1px solid "+h.planete.color+"33"),borderRadius:12,padding:"12px",marginBottom:6,cursor:"pointer"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{fontSize:24,flexShrink:0}}>{h.planete.emoji}</div>
+              <div style={{flex:1}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                  <span style={{fontSize:13,color:h.planete.color,fontWeight:"bold"}}>{h.planete.nom}</span>
+                  <span style={{fontSize:9,color:t.textMuted,fontWeight:"bold"}}>Heure #{h.numero} du {h.type}</span>
+                  {isCurrentHour&&<span style={{fontSize:9,background:h.planete.color,color:"white",borderRadius:20,padding:"1px 6px",fontWeight:"bold"}}>EN COURS</span>}
+                </div>
+                <div style={{fontSize:12,color:t.accentSoft,fontWeight:"bold"}}>{h.debutStr} — {h.finStr}</div>
+              </div>
+              <div style={{fontSize:14,color:t.textMuted,fontWeight:"bold"}}>{isSelected?"▲":"▼"}</div>
+            </div>
+            {isSelected&&(
+              <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid "+h.planete.color+"22"}}>
+                <p style={{fontSize:11,color:t.textMuted,lineHeight:1.7,marginBottom:10,fontWeight:"600"}}>{h.planete.description}</p>
+                <div style={{display:"flex",gap:8}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:10,color:"#4ecf8a",fontWeight:"bold",marginBottom:5}}>Favorable</div>
+                    {h.planete.favorables.map(function(f,j){return(
+                      <div key={j} style={{fontSize:10,color:t.textMuted,marginBottom:3,fontWeight:"600"}}>● {f}</div>
+                    );})}
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:10,color:"#e07a5f",fontWeight:"bold",marginBottom:5}}>Defavorable</div>
+                    {h.planete.defavorables.map(function(f,j){return(
+                      <div key={j} style={{fontSize:10,color:t.textMuted,marginBottom:3,fontWeight:"600"}}>● {f}</div>
+                    );})}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── RolesManavilView ─────────────────────────────────────────────────────
+function RolesManavilView(props) {
+  var t = props.t;
+  var sel = useState(null);
+  var selIdx = sel[0]; var setSel = sel[1];
+  var filter = useState("tous");
+  var filterVal = filter[0]; var setFilter = filter[1];
+
+  var categories = [
+    {key:"tous",label:"Tous",icon:"🌙"},
+    {key:"Tres benefique",label:"Tres benis",icon:"✨"},
+    {key:"Benefique",label:"Benis",icon:"⭐"},
+    {key:"Neutre",label:"Neutres",icon:"⚖️"},
+    {key:"Malefique",label:"Difficiles",icon:"⚠️"},
+  ];
+
+  var filtered = MANAZIL.filter(function(m){
+    if(filterVal === "tous") return true;
+    return m.nature === filterVal;
+  });
+
+  return (
+    <div>
+      <h3 style={{color:t.accent,fontSize:14,letterSpacing:2,marginBottom:8,fontWeight:"bold"}}>
+        Roles des Manazil
+      </h3>
+      <div style={{background:t.cardBg,border:"1px solid "+t.accent+"33",borderRadius:14,padding:"14px",marginBottom:14}}>
+        <p style={{fontSize:11,color:t.textMuted,lineHeight:1.8,margin:0,fontWeight:"600"}}>
+          Les 28 Manazil al-Qamar sont les 28 stations que traverse la Lune chaque mois. 
+          Chaque station possede une energie particuliere qui influence les activites humaines 
+          selon la tradition arabo-islamique classique transmise par Ibn Ajiba et Al-Buni.
+          Cette science est utilisee depuis des siecles pour choisir les moments propices 
+          aux actions importantes de la vie.
+        </p>
+      </div>
+
+      {/* Statistiques */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+        {[
+          ["✨","Tres benis",MANAZIL.filter(function(m){return m.nature==="Tres benefique";}).length,"#4ecf8a"],
+          ["⭐","Benis",MANAZIL.filter(function(m){return m.nature==="Benefique";}).length,"#C9A84C"],
+          ["⚖️","Neutres",MANAZIL.filter(function(m){return m.nature==="Neutre";}).length,"#8a9fc4"],
+          ["⚠️","Difficiles",MANAZIL.filter(function(m){return m.nature==="Malefique";}).length,"#e07a5f"],
+        ].map(function(item){return(
+          <div key={item[1]} style={{background:item[3]+"11",border:"1px solid "+item[3]+"33",borderRadius:10,padding:"10px",textAlign:"center"}}>
+            <div style={{fontSize:20,marginBottom:2}}>{item[0]}</div>
+            <div style={{fontSize:18,color:item[3],fontWeight:"bold"}}>{item[2]}</div>
+            <div style={{fontSize:10,color:t.textMuted,fontWeight:"bold"}}>{item[1]}</div>
+          </div>
+        );})}
+      </div>
+
+      {/* Filtres */}
+      <div style={{display:"flex",gap:6,marginBottom:12,overflowX:"auto",paddingBottom:4}}>
+        {categories.map(function(cat){return(
+          <button key={cat.key} onClick={function(){setFilter(cat.key);}}
+            style={{flexShrink:0,padding:"6px 10px",background:filterVal===cat.key?(t.accent+"33"):"none",border:filterVal===cat.key?("1px solid "+t.accent+"99"):("1px solid "+t.accent+"22"),borderRadius:20,color:filterVal===cat.key?t.accentSoft:t.textMuted,fontSize:11,cursor:"pointer",fontFamily:"inherit",fontWeight:"bold",whiteSpace:"nowrap"}}>
+            {cat.icon} {cat.label}
+          </button>
+        );})}
+      </div>
+
+      {/* Liste */}
+      {filtered.map(function(m){
+        var realIdx = MANAZIL.indexOf(m);
+        var c = NC[m.nature]||t.accent;
+        var isOpen = selIdx === realIdx;
+        return(
+          <div key={realIdx} style={{background:t.rowBg,border:"1px solid "+c+"44",borderRadius:14,padding:"14px",marginBottom:8}}>
+            <div onClick={function(){setSel(isOpen?null:realIdx);}} style={{cursor:"pointer"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{textAlign:"center",minWidth:32}}>
+                  <div style={{fontSize:9,color:t.textMuted,fontWeight:"bold"}}>#{realIdx+1}</div>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:17,color:t.accentSoft,direction:"rtl",fontWeight:"bold",marginBottom:2}}>{m.ar}</div>
+                  <div style={{fontSize:13,color:t.textLight,fontWeight:"bold",marginBottom:3}}>{m.fr}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontSize:9,background:c+"22",color:c,border:"1px solid "+c+"44",borderRadius:20,padding:"2px 8px",fontWeight:"bold"}}>{m.nature}</span>
+                    <span style={{fontSize:9,color:t.textMuted,fontWeight:"600"}}>{m.element} - {m.planete}</span>
+                  </div>
+                </div>
+                <div style={{fontSize:14,color:t.textMuted,fontWeight:"bold"}}>{isOpen?"▲":"▼"}</div>
+              </div>
+            </div>
+            {isOpen&&(
+              <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid "+c+"22"}}>
+                <p style={{fontSize:11,color:t.textMuted,lineHeight:1.7,marginBottom:12,fontWeight:"600"}}>{m.description}</p>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+                  {[
+                    {icon:"💒",label:"Mariage",text:m.mariage},
+                    {icon:"✈",label:"Voyage",text:m.voyage},
+                    {icon:"💰",label:"Commerce",text:m.commerce},
+                    {icon:"🌿",label:"Agriculture",text:m.agriculture},
+                    {icon:"🏥",label:"Sante",text:m.sante},
+                    {icon:"🔮",label:"Magie",text:m.magie},
+                  ].map(function(r){return(
+                    <div key={r.label} style={{background:t.accent+"08",border:"1px solid "+t.accent+"22",borderRadius:10,padding:"8px"}}>
+                      <div style={{fontSize:12,marginBottom:2}}>{r.icon}</div>
+                      <div style={{fontSize:10,color:t.accentSoft,fontWeight:"bold",marginBottom:2}}>{r.label}</div>
+                      <div style={{fontSize:9,color:t.textMuted,lineHeight:1.5,fontWeight:"600"}}>{r.text}</div>
+                    </div>
+                  );})}
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:10,color:"#4ecf8a",fontWeight:"bold",marginBottom:5}}>A faire</div>
+                    {m.favorables.map(function(f,i){return(
+                      <div key={i} style={{fontSize:10,color:t.textMuted,marginBottom:3,fontWeight:"600"}}>● {f}</div>
+                    );})}
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:10,color:"#e07a5f",fontWeight:"bold",marginBottom:5}}>A eviter</div>
+                    {m.defavorables.map(function(f,i){return(
+                      <div key={i} style={{fontSize:10,color:t.textMuted,marginBottom:3,fontWeight:"600"}}>● {f}</div>
+                    );})}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Sen-Astro Radio ──────────────────────────────────────────────────────
 const RADIO_PLAYLIST = [
   {id:"MQXvu3A0i_g",title:"Emission Sen-Astro #1"},
@@ -1581,6 +2101,8 @@ function loadYouTubeAPI() {
 
 function RadioPlayer(props) {
   var t = props.t;
+  var L = props.L||LANGS.fr;
+  var L = props.L||LANGS.fr;
   var playing = useState(false); var isPlaying = playing[0]; var setIsPlaying = playing[1];
   var idx = useState(0); var curIdx = idx[0]; var setCurIdx = idx[1];
   var expanded = useState(false); var isExpanded = expanded[0]; var setExpanded = expanded[1];
@@ -1591,10 +2113,20 @@ function RadioPlayer(props) {
   var track = RADIO_PLAYLIST[curIdx];
   var thumb = "https://img.youtube.com/vi/"+track.id+"/mqdefault.jpg";
 
+  // Calcul position en direct (comme vraie radio)
+  function getSyncPosition(){
+    var EPOCH = new Date("2025-01-01T00:00:00Z").getTime();
+    var SLOT = 90 * 60; // 90 minutes par emission
+    var TOTAL = RADIO_PLAYLIST.length * SLOT;
+    var elapsed = Math.floor((Date.now() - EPOCH) / 1000) % TOTAL;
+    return {
+      idx: Math.floor(elapsed / SLOT) % RADIO_PLAYLIST.length,
+      seek: elapsed % SLOT
+    };
+  }
+
   useEffect(function(){
-    // Charger l API YouTube
     loadYouTubeAPI();
-    // Attendre que l API soit prête
     var attempts = 0;
     var interval = setInterval(function(){
       attempts++;
@@ -1602,31 +2134,37 @@ function RadioPlayer(props) {
         clearInterval(interval);
         initPlayer();
       }
-      if(attempts > 30) clearInterval(interval);
+      if(attempts > 40) clearInterval(interval);
     }, 500);
     return function(){ clearInterval(interval); };
   },[]);
 
   function initPlayer(){
     if(playerRef.current) return;
+    var sync = getSyncPosition();
+    setCurIdx(sync.idx);
     try {
       playerRef.current = new window.YT.Player(containerId, {
         height:"1", width:"1",
-        videoId: RADIO_PLAYLIST[0].id,
+        videoId: RADIO_PLAYLIST[sync.idx].id,
         playerVars:{
           autoplay:0, controls:0, disablekb:1,
           fs:0, iv_load_policy:3, modestbranding:1,
-          playsinline:1, rel:0
+          playsinline:1, rel:0,
+          start: Math.min(sync.seek, 7100)
         },
         events:{
-          onReady: function(e){ playerReady.current = true; },
+          onReady: function(e){
+            playerReady.current = true;
+          },
           onStateChange: function(e){
             if(window.YT){
               var playing = e.data === window.YT.PlayerState.PLAYING;
               setIsPlaying(playing);
+              // Passage automatique a l emission suivante
               if(e.data === window.YT.PlayerState.ENDED){
                 setCurIdx(function(prev){
-                  var next = (prev+1)%RADIO_PLAYLIST.length;
+                  var next = (prev+1) % RADIO_PLAYLIST.length;
                   setTimeout(function(){
                     if(playerRef.current && playerReady.current){
                       playerRef.current.loadVideoById(RADIO_PLAYLIST[next].id);
@@ -1644,7 +2182,6 @@ function RadioPlayer(props) {
 
   function togglePlay(){
     if(!playerRef.current || !playerReady.current){
-      // Fallback: ouvrir YouTube
       window.open("https://www.youtube.com/watch?v="+track.id,"_blank");
       return;
     }
@@ -1652,8 +2189,20 @@ function RadioPlayer(props) {
       if(isPlaying){
         playerRef.current.pauseVideo();
       } else {
-        playerRef.current.loadVideoById(track.id);
-        playerRef.current.playVideo();
+        // Reprendre en direct - calculer position actuelle
+        var sync = getSyncPosition();
+        if(sync.idx !== curIdx){
+          // Nouvelle emission depuis la derniere fois
+          setCurIdx(sync.idx);
+          playerRef.current.loadVideoById({
+            videoId: RADIO_PLAYLIST[sync.idx].id,
+            startSeconds: Math.min(sync.seek, 7100)
+          });
+        } else {
+          // Meme emission, reprendre a la position en direct
+          playerRef.current.seekTo(Math.min(sync.seek, 7100), true);
+          playerRef.current.playVideo();
+        }
       }
     } catch(e){
       window.open("https://www.youtube.com/watch?v="+track.id,"_blank");
@@ -1665,9 +2214,23 @@ function RadioPlayer(props) {
     setIsPlaying(false);
     if(playerRef.current && playerReady.current){
       try {
-        playerRef.current.cueVideoById(RADIO_PLAYLIST[newIdx].id);
+        // Si on choisit l emission en cours dans le direct -> reprendre en direct
+        var sync = getSyncPosition();
+        if(newIdx === sync.idx){
+          playerRef.current.loadVideoById({
+            videoId: RADIO_PLAYLIST[newIdx].id,
+            startSeconds: Math.min(sync.seek, 7100)
+          });
+        } else {
+          playerRef.current.cueVideoById(RADIO_PLAYLIST[newIdx].id);
+        }
       } catch(e){}
     }
+  }
+
+  // Verifier si une emission est en direct actuellement
+  function isLiveNow(idx){
+    return getSyncPosition().idx === idx;
   }
 
   function prev(){ changeTrack((curIdx+RADIO_PLAYLIST.length-1)%RADIO_PLAYLIST.length); }
@@ -1810,11 +2373,13 @@ export default function App() {
   var mds=useState(null); var md=mds[0]; var setMd=mds[1];
   var ld=useState(false); var loading=ld[0]; var setLoading=ld[1];
   var tb=useState("today"); var tab=tb[0]; var setTab=tb[1];
-  var tk=useState("night"); var themeKey=tk[0]; var setThemeKey=tk[1];
+  var tk=useState("white"); var themeKey=tk[0]; var setThemeKey=tk[1];
+  var lg=useState("fr"); var lang=lg[0]; var setLang=lg[1];
   var hd=useState(null); var hijriDate=hd[0]; var setHijriDate=hd[1];
   var t = THEMES[themeKey];
+  var L = LANGS[lang]||LANGS.fr;
 
-  var tabOrder = ["today","boutique","natal","dua","dhikr","wheel","calendar","dates","roles","list","tafsir","nuits","eclipses","settings"];
+  var tabOrder = ["today","planetary","rolesManzil","boutique","natal","dua","dhikr","wheel","calendar","dates","list","tafsir","nuits","eclipses","settings"];
   var touchStart = useRef(null);
 
   function handleTouchStart(e) { touchStart.current = e.touches[0].clientX; }
@@ -1858,21 +2423,12 @@ export default function App() {
   var ts = h+":"+mn;
   var ph = phase(selDate);
 
-  var TABS = [
-    ["today","Aujourd hui"],["boutique","Boutique"],["natal","Natal"],
-    ["dua","Dua"],["dhikr","Dhikr"],["wheel","Roue"],["calendar","Mois"],
-    ["dates","Dates"],["roles","Roles"],["list","Les 28"],
-    ["tafsir","Tafsir"],["nuits","Nuits"],["eclipses","Eclipses"],["settings","Reglages"]
-  ];
-
-  var TAB_ICONS = {
-    today:"🌙",boutique:"🛍️",natal:"⭐",dua:"🤲",dhikr:"📿",
-    wheel:"⭕",calendar:"📅",dates:"🗓️",roles:"📖",list:"📋",
-    tafsir:"📖",nuits:"✨",eclipses:"🌑",settings:"⚙️"
-  };
+  var TAB_KEYS = ["today","planetary","rolesManzil","boutique","natal","dua","dhikr","wheel","calendar","dates","list","tafsir","nuits","eclipses","settings"];
+  var TABS = TAB_KEYS.map(function(k){ return [k, (L.tabs&&L.tabs[k])||k]; });
+  var TAB_ICONS = (L.tabIcons)||{today:"🌙",planetary:"🪐",rolesManzil:"📜",boutique:"🛍️",natal:"⭐",dua:"🤲",dhikr:"📿",wheel:"⭕",calendar:"📅",dates:"🗓️",list:"📋",tafsir:"📖",nuits:"✨",eclipses:"🌑",settings:"⚙️"};
 
   return (
-    <div style={{minHeight:"100vh",maxWidth:430,margin:"0 auto",background:t.root,fontFamily:"Georgia,serif",color:t.textLight,position:"relative",overflow:"hidden"}}
+    <div style={{minHeight:"100vh",maxWidth:430,margin:"0 auto",background:t.root,fontFamily:lang==="ar"?"Arial,sans-serif":"Georgia,serif",color:t.textLight,position:"relative",overflow:"hidden",direction:L.dir}}
       onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       {t.starsBg&&<StarField/>}
       <style>{ANIM_CSS}</style>
@@ -1886,6 +2442,17 @@ export default function App() {
         </div>
         <h1 style={{margin:"0 0 3px",fontSize:24,fontWeight:"bold",color:t.accentSoft,letterSpacing:2}}>منازل القمر</h1>
         <p style={{margin:0,fontSize:10,color:t.textMuted,letterSpacing:4,textTransform:"uppercase",fontWeight:"bold"}}>STATIONS LUNAIRES</p>
+        <div style={{display:"flex",justifyContent:"center",gap:6,marginTop:8}}>
+          {[["fr","FR"],["ar","AR"],["en","EN"]].map(function(item){
+            var flags = {fr:"FR",ar:"AR",en:"EN"};
+            return(
+              <button key={item[0]} onClick={function(){setLang(item[0]);}}
+                style={{padding:"5px 12px",background:lang===item[0]?(t.accent+"33"):"none",border:lang===item[0]?("1px solid "+t.accent+"99"):("1px solid "+t.accent+"33"),borderRadius:20,color:lang===item[0]?t.accentSoft:t.textMuted,fontSize:11,cursor:"pointer",fontFamily:"inherit",fontWeight:"bold"}}>
+                {item[0]==="fr"?"🇫🇷":item[0]==="ar"?"🇸🇦":"🇬🇧"} {item[1]}
+              </button>
+            );
+          })}
+        </div>
         {hijriDate&&(
           <div style={{marginTop:4}}>
             <div style={{fontSize:12,fontWeight:"bold",color:t.accent,direction:"rtl"}}>{hijriDate.displayAr||hijriDate.display}</div>
@@ -1896,7 +2463,7 @@ export default function App() {
       <BookBanner/>
 
       <div style={{display:"flex",gap:6,padding:"8px 12px",background:t.tabsBg+"99",borderBottom:"1px solid "+t.tabBorder,alignItems:"center"}}>
-        {[["sidereal","☽","Sideral","Arabo-islamique"],["tropical","☀","Tropical","Occidental"]].map(function(item){
+        {[["sidereal","☽",(L.ui&&L.ui.sideral)||"Sideral",(L.ui&&L.ui.arabIslamique)||"Arabo-islamique"],["tropical","☀",(L.ui&&L.ui.tropical)||"Tropical",(L.ui&&L.ui.occidental)||"Occidental"]].map(function(item){
           var k=item[0], icon=item[1], title=item[2], sub=item[3];
           return(
             <button key={k} style={{flex:1,display:"flex",alignItems:"center",gap:6,background:sys===k?t.sysBtnActiveBg:"none",border:sys===k?("1px solid "+t.sysBtnActiveBorder):("1px solid "+t.sysBtnBorder),borderRadius:10,padding:"7px 8px",cursor:"pointer",color:sys===k?t.textLight:t.textMuted,fontFamily:"inherit"}}
@@ -1936,27 +2503,28 @@ export default function App() {
 
       <div style={{padding:"12px 12px 130px",animation:"fadeUp .35s ease both"}} key={tab}>
         {tab==="today"&&(
-          <TodayView md={md} loading={loading} ph={ph} sys={sys} selDate={selDate} ds={ds} ts={ts} t={t} hijriDate={hijriDate}
+          <TodayView md={md} loading={loading} ph={ph} sys={sys} selDate={selDate} ds={ds} ts={ts} t={t} hijriDate={hijriDate} L={L} lang={lang} L={L}
             onDC={function(e){var d=new Date(e.target.value);d.setHours(selDate.getHours(),selDate.getMinutes());setSelDate(d);}}
             onTC={function(e){var parts=e.target.value.split(":");var d=new Date(selDate);d.setHours(parseInt(parts[0]),parseInt(parts[1]),0);setSelDate(d);}}
           />
         )}
-        {tab==="boutique"&&<BoutiqueView t={t}/>}
-        {tab==="natal"&&<NatalView sys={sys} t={t}/>}
-        {tab==="dua"&&<DuaView md={md} t={t}/>}
-        {tab==="dhikr"&&<DhikrView md={md} t={t}/>}
-        {tab==="wheel"&&<WheelView md={md} ph={ph} t={t}/>}
-        {tab==="calendar"&&<MonthCal selDate={selDate} setSelDate={setSelDate} sys={sys} setTab={setTab} t={t}/>}
-        {tab==="dates"&&<FavorableDates sys={sys} t={t}/>}
-        {tab==="roles"&&<RolesView md={md} t={t}/>}
-        {tab==="list"&&<ListView idx={md?md.manzilIdx:-1} t={t}/>}
-        {tab==="tafsir"&&<TafsirView t={t}/>}
-        {tab==="nuits"&&<NuitsView t={t}/>}
-        {tab==="eclipses"&&<EclipsesView t={t}/>}
-        {tab==="settings"&&<SettingsView t={t}/>}
+        {tab==="planetary"&&<HeuresPlanetairesView t={t} L={L} date={selDate}/>}
+        {tab==="rolesManzil"&&<RolesManavilView t={t} L={L} L={L}/>}
+        {tab==="boutique"&&<BoutiqueView t={t} L={L} L={L}/>}
+        {tab==="natal"&&<NatalView sys={sys} t={t} L={L}/>}
+        {tab==="dua"&&<DuaView md={md} t={t} L={L}/>}
+        {tab==="dhikr"&&<DhikrView md={md} t={t} L={L} L={L}/>}
+        {tab==="wheel"&&<WheelView md={md} ph={ph} t={t} L={L} L={L}/>}
+        {tab==="calendar"&&<MonthCal selDate={selDate} setSelDate={setSelDate} sys={sys} setTab={setTab} t={t} L={L} L={L}/>}
+        {tab==="dates"&&<FavorableDates sys={sys} t={t} L={L} L={L}/>}
+        {tab==="list"&&<ListView idx={md?md.manzilIdx:-1} t={t} L={L} L={L}/>}
+        {tab==="tafsir"&&<TafsirView t={t} L={L} L={L}/>}
+        {tab==="nuits"&&<NuitsView t={t} L={L} L={L}/>}
+        {tab==="eclipses"&&<EclipsesView t={t} L={L} L={L}/>}
+        {tab==="settings"&&<SettingsView t={t} L={L} L={L}/>}
       </div>
 
-      <RadioPlayer t={t}/>
+      <RadioPlayer t={t} L={L}/>
 
       <button onClick={function(){window.scrollTo({top:0,behavior:"smooth"});}}
         style={{position:"fixed",bottom:85,right:16,width:40,height:40,borderRadius:"50%",background:t.accent,border:"none",color:t.deepBlue,fontSize:20,fontWeight:"bold",cursor:"pointer",zIndex:100,boxShadow:"0 4px 16px "+t.accent+"66",animation:"pulse 2s infinite"}}>
